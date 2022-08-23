@@ -1,0 +1,152 @@
+---
+title: "Introduction to aorsf"
+description: >
+  Learn how to get started with the basics of aorsf.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to aorsf}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.height = 5, 
+  fig.width = 7
+)
+```
+
+
+This article covers core features of the `aorsf` package.
+
+## Background: ORSF
+
+The oblique random survival forest (ORSF) is an extension of the axis-based RSF algorithm.
+
+- See [orsf](https://bcjaeger.github.io/aorsf/reference/orsf.html) for more details on ORSFs.
+
+- see the [arXiv](https://arxiv.org/abs/2208.01129) paper for more details on algorithms used specifically by `aorsf`.
+
+## Accelerated ORSF
+
+The purpose of `aorsf` ('a' is short for accelerated) is to provide routines to fit ORSFs that will scale adequately to large data sets. The fastest algorithm available in the package is the accelerated ORSF model, which is the default method used by `orsf()`:
+
+```{r}
+
+library(aorsf)
+
+set.seed(329)
+
+orsf_fit <- orsf(data = pbc_orsf, 
+                 formula = Surv(time, status) ~ . - id)
+
+orsf_fit
+
+```
+
+
+you may notice that the first input of `aorsf` is `data`. This is a design choice that makes it easier to use `orsf` with pipes (i.e., `%>%` or `|>`). For instance,
+
+```{r, eval=FALSE}
+library(dplyr)
+
+orsf_fit <- pbc_orsf |> 
+ select(-id) |> 
+ orsf(formula = Surv(time, status) ~ .)
+
+```
+
+## Interpretation
+
+`aorsf` includes several functions dedicated to interpretation of ORSFs, both through estimation of partial dependence and variable importance.
+
+### Variable importance
+
+`aorsf` provides multiple ways to compute variable importance. 
+
+- To compute negation importance, ORSF multiplies each coefficient of that variable by -1 and then re-computes the out-of-sample (sometimes referred to as out-of-bag) accuracy of the ORSF model. 
+
+    ```{r}
+
+    orsf_vi_negate(orsf_fit)
+
+    ```
+
+- You can also compute variable importance using permutation, a more classical approach.
+
+    ```{r}
+  
+    orsf_vi_permute(orsf_fit)
+  
+    ```
+
+- A faster alternative to permutation and negation importance is ANOVA importance, which computes the proportion of times each variable obtains a low p-value (p < 0.01) while the forest is grown.
+
+    ```{r}
+    
+    orsf_vi_anova(orsf_fit)
+    
+    ```
+
+### Partial dependence (PD) 
+
+`r aorsf:::roxy_pd_explain()`
+
+For more on PD, see the [vignette](https://bcjaeger.github.io/aorsf/articles/pd.html)
+
+### Individual conditional expectations (ICE)
+
+`r aorsf:::roxy_ice_explain()`
+
+For more on ICE, see the [vignette](https://bcjaeger.github.io/aorsf/articles/pd.html#individual-conditional-expectations-ice)
+
+
+## What about the original ORSF?
+
+The original ORSF (i.e., `obliqueRSF`) used `glmnet` to find linear combinations of inputs. `aorsf` allows users to implement this approach using the `orsf_control_net()` function: 
+
+```{r}
+
+orsf_net <- orsf(data = pbc_orsf, 
+                 formula = Surv(time, status) ~ . - id, 
+                 control = orsf_control_net(),
+                 n_tree = 50)
+
+```
+
+`net` forests fit a lot faster than the original ORSF function in `obliqueRSF`. However, `net` forests are still much slower than `cph` ones:
+
+```{r}
+
+# tracking how long it takes to fit 50 glmnet trees
+print(
+ t1 <- system.time(
+  orsf(data = pbc_orsf, 
+       formula = Surv(time, status) ~ . - id, 
+       control = orsf_control_net(),
+       n_tree = 50)
+ )
+)
+
+# and how long it takes to fit 50 cph trees
+print(
+ t2 <- system.time(
+  orsf(data = pbc_orsf, 
+       formula = Surv(time, status) ~ . - id, 
+       control = orsf_control_cph(),
+       n_tree = 50)
+ )
+)
+
+t1['elapsed'] / t2['elapsed']
+
+
+```
+
+## aorsf and other machine learning software
+
+The unique feature of `aorsf` is its fast algorithms to fit ORSF ensembles. `RLT` and `obliqueRSF` both fit oblique random survival forests, but `aorsf` does so faster. `ranger` and `randomForestSRC` fit survival forests, but neither package supports oblique splitting. `obliqueRF` fits oblique random forests for classification and regression, but not survival. `PPforest` fits oblique random forests for classification but not survival. 
+
+Note: The default prediction behavior for `aorsf` models is to produce predicted risk at a specific prediction horizon, which is not the default for `ranger`  or `randomForestSRC`. I think this will change in the future, as computing time independent predictions with `aorsf` could be helpful.

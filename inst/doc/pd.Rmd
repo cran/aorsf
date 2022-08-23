@@ -1,0 +1,297 @@
+---
+title: "PD and ICE curves with ORSF"
+description: >
+  Learn how to interpret ORSF models using partial dependence.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{PD and ICE curves with ORSF}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>", 
+  fig.height = 5, 
+  fig.width = 7
+)
+
+library(aorsf)
+library(ggplot2)
+
+```
+
+## Partial dependence (PD)
+
+`r aorsf:::roxy_pd_explain()`
+
+Begin by fitting an ORSF ensemble. Set a prediction horizon of 5 years when we fit the ensemble so that any `aorsf` function that we pass this ensemble to will assume we want to compute predictions at 5 years.
+
+```{r}
+
+library(aorsf)
+
+pred_horizon <- 365.25 * 5
+
+set.seed(329730)
+
+index_train <- sample(nrow(pbc_orsf), 150) 
+
+pbc_orsf_train <- pbc_orsf[index_train, ]
+pbc_orsf_test <- pbc_orsf[-index_train, ]
+
+fit <- orsf(data = pbc_orsf_train, 
+            formula = Surv(time, status) ~ . - id,
+            oobag_pred_horizon = pred_horizon)
+
+fit
+
+```
+
+
+## Three ways to compute PD
+
+You can compute PD three ways with `aorsf`: 
+
+- using in-bag predictions for the training data
+
+  ```{r}
+  
+  pd_inb <- orsf_pd_inb(fit, pred_spec = list(bili = 1:5))
+  
+  pd_inb
+  
+  ```
+
+- using out-of-bag predictions for the training data
+
+  ```{r}
+  
+  pd_oob <- orsf_pd_oob(fit, pred_spec = list(bili = 1:5))
+  
+  pd_oob
+  
+  ```
+
+- using predictions for a new set of data
+
+  ```{r}
+  
+  pd_test <- orsf_pd_new(fit, 
+                         new_data = pbc_orsf_test, 
+                         pred_spec = list(bili = 1:5))
+  
+  pd_test
+  
+  ```
+
+- in-bag PD indicates relationships that the model has learned during training. This is helpful if your goal is to interpret the model.
+
+- out-of-bag PD indicates relationships that the model has learned during training but using the out-of-bag data simulates application of the model to new data. if you want to test your model's reliability or fairness in new data but you don't have access to a large testing set.
+
+- new data PD shows how the model predicts outcomes for observations it has not seen. This is helpful if you want to test your model's reliability or fairness.
+
+Let's re-fit our ORSF to all available data before proceeding to the next sections.
+
+```{r}
+
+set.seed(329730)
+
+fit <- orsf(pbc_orsf, 
+            Surv(time, status) ~ . -id,
+            oobag_pred_horizon = pred_horizon)
+
+```
+
+## One variable, one horizon
+
+Computing PD for a single variable is straightforward:
+
+```{r}
+
+pd_sex <- orsf_pd_oob(fit, pred_spec = list(sex = c("m", "f")))
+
+pd_sex
+
+```
+
+The output shows that the expected predicted mortality risk for men is substantially higher than women at 5 years after baseline.
+
+## One variable, moving horizon
+
+What if the effect of a predictor varies over time? PD can show this.
+
+```{r}
+
+pd_sex_tv <- orsf_pd_oob(fit, pred_spec = list(sex = c("m", "f")),
+                         pred_horizon = seq(365, 365*5))
+
+ggplot(pd_sex_tv, aes(x = pred_horizon, y = mean, color = sex)) + 
+ geom_line() +
+ labs(x = 'Time since baseline',
+      y = 'Expected risk')
+
+```
+
+From inspection, we can see that males have higher risk than females and the difference in that risk grows over time. This can also be seen by viewing the ratio of expected risk over time:
+
+```{r}
+
+library(data.table)
+
+ratio_tv <- pd_sex_tv[
+ , .(ratio = mean[sex == 'm'] / mean[sex == 'f']), by = pred_horizon
+]
+
+ggplot(ratio_tv, aes(x = pred_horizon, y = ratio)) + 
+ geom_line(color = 'grey') + 
+ geom_smooth(color = 'black', se = FALSE) + 
+ labs(x = 'time since baseline',
+      y = 'ratio in expected risk for males versus females')
+
+```
+
+## Multiple variables, marginally
+
+If you want to compute PD marginally for multiple variables, just list the variable values in `pred_spec` and specify `expand_grid = FALSE`. 
+
+```{r}
+
+pd_two_vars <-  
+ orsf_pd_oob(fit,
+             pred_spec = list(sex = c("m", "f"), bili = 1:5),
+             expand_grid = FALSE)
+
+pd_two_vars
+
+```
+
+Now would it be tedious if you wanted to do this for all the variables? You bet. That's why we made a function for that. As a bonus, the printed output is sorted from most to least important variables.
+
+```{r}
+
+pd_smry <- orsf_summarize_uni(fit)
+
+pd_smry
+
+```
+
+It's easy enough to turn this 'summary' object into a `data.table` for downstream plotting and tables.
+
+```{r}
+
+head(as.data.table(pd_smry))
+
+```
+
+
+## Multiple variables, jointly
+
+PD can show the expected value of a model's predictions as a function of a specific predictor, or as a function of multiple predictors. For instance, we can estimate predicted risk as a joint function of `bili`, `edema`, and `trt`:
+
+```{r}
+
+pred_spec = list(bili = seq(1, 5, length.out = 20),
+               edema = levels(pbc_orsf_train$edema),
+               trt = levels(pbc_orsf$trt))
+
+pd_bili_edema <- orsf_pd_oob(fit, pred_spec)
+
+library(ggplot2)
+
+ggplot(pd_bili_edema, aes(x = bili, y = medn, col = trt, linetype = edema)) + 
+ geom_line() + 
+ labs(y = 'Expected predicted risk')
+
+```
+
+From inspection, 
+
+- the model's predictions indicate slightly lower risk for the placebo group, and these do not seem to change much at different values of `bili` or `edema`.
+
+- There is a clear increase in predicted risk with higher levels of `edema` and with higher levels of `bili`
+
+- the slope of predicted risk as a function of `bili` appears highest among patients with `edema` of 0.5. Is the effect of `bili` modified by `edema` being 0.5? A quick sanity check with `coxph` suggests there is.
+
+  ```{r}
+  
+  library(survival)
+  
+  pbc_orsf$edema_05 <- ifelse(pbc_orsf$edema == '0.5', 'yes', 'no')
+  
+  fit_cph <- coxph(Surv(time,status) ~ edema_05 * bili, 
+                   data = pbc_orsf)
+  
+  anova(fit_cph)
+  
+  ```
+  
+```{r, echo = FALSE}
+
+# in case pbc_orsf is used in downstream docs
+
+pbc_orsf$edema_05 <- NULL
+
+```
+
+
+
+## Individual conditional expectations (ICE)
+
+`r aorsf:::roxy_ice_explain()`
+
+Just like PD, we can compute ICE using in-bag, out-of-bag, or testing data, and the same principles apply. We'll use out-of-bag estimates here.
+
+## Visualizing ICE curves
+
+Inspecting the ICE curves for each observation can help identify whether there is heterogeneity in a model's predictions. I.e., does the effect of the variable follow the same pattern for all the data, or are there groups where the variable impacts risk differently? 
+
+I am going to turn off boundary checking in `orsf_ice_oob` by setting `boundary_checks = FALSE`, and this will allow me to generate ICE curves that go beyond the 90th percentile of `bili`.
+
+  ```{r}
+  
+  pred_spec <- list(bili = seq(1, 10, length.out = 25))
+  
+  ice_oob <- orsf_ice_oob(fit, pred_spec, boundary_checks = FALSE)
+  
+  ice_oob
+                       
+  ```
+
+- `id_variable` is an identifier for the current value of the variable(s) that are in the data. It is redundant if you only have one variable, but helpful if there are multiple variables.
+
+- `id_row` is an identifier for the observation in the original data. It is used to group an observation's predictions together in plots.
+
+For plots, it is helpful to scale the ICE data. I subtract the initial value of predicted risk (i.e., when `bili = 1`) from each observation's conditional expectation values. So,
+
+- Every curve start at 0
+
+- The plot shows *change* in predicted risk as a function of `bili`.
+
+  ```{r}
+  
+  ice_oob[, pred := pred - pred[bili==1], by = id_row]
+  
+  ```
+  
+Now we can visualize the curves.
+
+```{r, -orsf_ice}
+
+library(ggplot2)
+
+ggplot(ice_oob, aes(x = bili, 
+                    y = pred, 
+                    group = id_row)) + 
+ geom_line(alpha = 0.15) + 
+ labs(y = 'Change in predicted risk') +
+ geom_smooth(se = FALSE, aes(group = 1))
+
+```
+
+From inspection of the figure,
+
+- Most of the individual slopes cluster around the overall trend - Good!
+
+- A small number of individual slopes appear to be flat. It may be helpful to investigate this further.

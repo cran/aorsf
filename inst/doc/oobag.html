@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Out-of-bag predictions and evaluation</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Out-of-bag predictions and evaluation</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aorsf)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(survivalROC)</span></code></pre></div>
+<div id="out-of-bag-data" class="section level2">
+<h2>Out-of-bag data</h2>
+<p>In random forests, each tree is grown with a bootstrapped version of
+the training set. Because bootstrap samples are selected with
+replacement, each bootstrapped training set contains about two-thirds of
+instances in the original training set. The ‘out-of-bag’ data are
+instances that are <em>not</em> in the bootstrapped training set.</p>
+</div>
+<div id="out-of-bag-predictions-and-error" class="section level2">
+<h2>Out-of-bag predictions and error</h2>
+<p>Each tree in the random forest can make predictions for its
+out-of-bag data, and the out-of-bag predictions can be aggregated to
+make an ensemble out-of-bag prediction. Since the out-of-bag data are
+not used to grow the tree, the accuracy of the ensemble out-of-bag
+predictions approximate the generalization error of the random forest.
+Out-of-bag prediction error plays a central role for some routines that
+estimate variable importance, e.g. negation importance.</p>
+<p>Let’s fit an oblique random survival forest and plot the distribution
+of the ensemble out-of-bag predictions.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">orsf</span>(<span class="at">data =</span> pbc_orsf, </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">oobag_pred_horizon =</span> <span class="dv">3500</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(fit<span class="sc">$</span>pred_oobag, </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&#39;Ensemble out-of-bag survival predictions at t=3,500&#39;</span>)</span></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>Not surprisingly, all of the survival predictions are between 0 and
+1. Next, let’s check the out-of-bag accuracy of <code>fit</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># what function is used to evaluate out-of-bag predictions?</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>fit<span class="sc">$</span>eval_oobag<span class="sc">$</span>stat_type</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Harrell&#39;s C-statistic&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># what is the output from this function?</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>fit<span class="sc">$</span>eval_oobag<span class="sc">$</span>stat_values</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;           [,1]</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1,] 0.8419983</span></span></code></pre></div>
+<p>The out-of-bag estimate of Harrell’s C-statistic (the default method
+to evaluate out-of-bag predictions) is 0.8419983.</p>
+</div>
+<div id="monitoring-out-of-bag-error" class="section level2">
+<h2>Monitoring out-of-bag error</h2>
+<p>As each out-of-bag data set contains about one-third of the training
+set, the out-of-bag error estimate usually converges to a stable value
+as more trees are added to the forest. If you want to monitor the
+convergence of out-of-bag error for your own oblique random survival
+forest, you can set <code>oobag_eval_every</code> to compute out-of-bag
+error at every <code>oobag_eval_every</code> tree. For example, let’s
+compute out-of-bag error after fitting each tree in a forest of 50
+trees:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">orsf</span>(<span class="at">data =</span> pbc_orsf,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">n_tree =</span> <span class="dv">50</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">oobag_pred_horizon =</span> <span class="dv">3500</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">oobag_eval_every =</span> <span class="dv">1</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a> <span class="at">x =</span> <span class="fu">seq</span>(<span class="dv">1</span>, <span class="dv">50</span>, <span class="at">by =</span> <span class="dv">1</span>),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a> <span class="at">y =</span> fit<span class="sc">$</span>eval_oobag<span class="sc">$</span>stat_values, </span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a> <span class="at">main =</span> <span class="st">&#39;Out-of-bag C-statistic computed after each new tree is grown.&#39;</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a> <span class="at">xlab =</span> <span class="st">&#39;Number of trees grown&#39;</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a> <span class="at">ylab =</span> fit<span class="sc">$</span>eval_oobag<span class="sc">$</span>stat_type</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>In general, at least 500 trees are recommended for a random forest
+fit. We’re just using 50 in this case for better illustration of the
+out-of-bag error curve. Also, it helps to make run-times low whenever I
+need to re-compile the package vignettes.</p>
+</div>
+<div id="user-supplied-out-of-bag-evaluation-functions" class="section level2">
+<h2>User-supplied out-of-bag evaluation functions</h2>
+<p>In some cases, you may want to use your own function to compute
+out-of-bag error. For example, here is a simple (and incorrect) way to
+compute the Brier score. (It is incorrect because it does not account
+for censoring)</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>oobag_fun_brier <span class="ot">&lt;-</span> <span class="cf">function</span>(y_mat, s_vec){</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a> <span class="co"># risk = 1 - survival </span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a> r_vec <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> s_vec</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a> <span class="co"># mean of the squared differences between predicted and observed risk</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a> <span class="fu">mean</span>( (y_mat[, <span class="st">&#39;status&#39;</span>] <span class="sc">-</span> r_vec)<span class="sc">^</span><span class="dv">2</span> )</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a> </span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>There are two ways to apply your own function to compute out-of-bag
+error. First, you can apply your function to the out-of-bag survival
+predictions that are stored in ‘aorsf’ objects, e.g:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">oobag_fun_brier</span>(<span class="at">y_mat =</span> fit<span class="sc">$</span>data[, <span class="fu">c</span>(<span class="st">&#39;time&#39;</span>, <span class="st">&#39;status&#39;</span>)],</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">s_vec =</span> fit<span class="sc">$</span>pred_oobag)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0.1921042</span></span></code></pre></div>
+<p>Second, you can pass your function into <code>orsf()</code>, and it
+will be used in place of Harrell’s C-statistic:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">orsf</span>(<span class="at">data =</span> pbc_orsf,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">n_tree =</span> <span class="dv">50</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">oobag_pred_horizon =</span> <span class="dv">3500</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">oobag_fun =</span> oobag_fun_brier,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>            <span class="at">oobag_eval_every =</span> <span class="dv">1</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a> <span class="at">x =</span> <span class="fu">seq</span>(<span class="dv">1</span>, <span class="dv">50</span>, <span class="at">by =</span> <span class="dv">1</span>),</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a> <span class="at">y =</span> fit<span class="sc">$</span>eval_oobag<span class="sc">$</span>stat_values, </span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a> <span class="at">main =</span> <span class="st">&#39;Out-of-bag error computed after each new tree is grown.&#39;</span>,</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a> <span class="at">sub =</span> <span class="st">&#39;For the Brier score, lower values indicate more accurate predictions&#39;</span>,</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a> <span class="at">xlab =</span> <span class="st">&#39;Number of trees grown&#39;</span>,</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a> <span class="at">ylab =</span> <span class="st">&quot;Brier score&quot;</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>Let’s run one more example showing how this can be done using
+functions from other packages, e.g., <code>survivalROC</code> from the
+<code>survivalROC</code> package:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>oobag_fun_sroc <span class="ot">&lt;-</span> <span class="cf">function</span>(y_mat, s_vec){</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a> score <span class="ot">&lt;-</span> survivalROC<span class="sc">::</span><span class="fu">survivalROC</span>(</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">Stime =</span> y_mat[, <span class="st">&#39;time&#39;</span>],</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">status =</span> y_mat[, <span class="st">&#39;status&#39;</span>],</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># risk = 1 - survival</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">marker =</span> <span class="dv">1</span> <span class="sc">-</span> s_vec,</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># important!! Make sure this matches the time you used in orsf</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">predict.time =</span> <span class="dv">3500</span>,</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># nearest neighbor estimation for censoring</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;NNE&quot;</span>,</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># value taken from ?survivalROC examples</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">span =</span> <span class="fl">0.25</span> <span class="sc">*</span> <span class="fu">nrow</span>(y_mat)<span class="sc">^</span>(<span class="sc">-</span><span class="fl">0.20</span>)</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a> )</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a> </span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a> <span class="co"># oobag_fun needs to return a numeric value of length 1</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a> score<span class="sc">$</span>AUC</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">orsf</span>(<span class="at">data =</span> pbc_orsf,</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>            <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id,</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>            <span class="at">n_tree =</span> <span class="dv">50</span>,</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>            <span class="at">oobag_pred_horizon =</span> <span class="dv">3500</span>,</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>            <span class="at">oobag_fun =</span> oobag_fun_sroc,</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>            <span class="at">oobag_eval_every =</span> <span class="dv">1</span>)</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a> <span class="at">x =</span> <span class="fu">seq</span>(<span class="dv">50</span>),</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a> <span class="at">y =</span> fit<span class="sc">$</span>eval_oobag<span class="sc">$</span>stat_values, </span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a> <span class="at">main =</span> <span class="st">&#39;Out-of-bag time-dependent AUC</span><span class="sc">\n</span><span class="st">computed after each new tree is grown.&#39;</span>,</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a> <span class="at">xlab =</span> <span class="st">&#39;Number of trees grown&#39;</span>,</span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a> <span class="at">ylab =</span> <span class="st">&quot;AUC at t = 3,500&quot;</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<div id="specific-instructions-on-user-supplied-functions" class="section level3">
+<h3>Specific instructions on user-supplied functions</h3>
+<p>User-supplied functions must:</p>
+<ol style="list-style-type: decimal">
+<li>have exactly two arguments named <code>y_mat</code> and
+<code>s_vec</code>.</li>
+<li>return a numeric output of length 1</li>
+</ol>
+<p>If either of these conditions is not true, an error will occur. A
+simple test to make sure your user-supplied function will work with the
+aorsf package is below:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Helper code to make sure your oobag_fun function will work with aorsf</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># time and status values</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>test_time <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="at">from =</span> <span class="dv">1</span>, <span class="at">to =</span> <span class="dv">5</span>, <span class="at">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>test_status <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">1</span>), <span class="at">each =</span> <span class="dv">50</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co"># y-matrix is presumed to contain time and status (with column names)</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>y_mat <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="at">time =</span> test_time, <span class="at">status =</span> test_status)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co"># s_vec is presumed to be a vector of survival probabilities</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>s_vec <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fl">0.9</span>, <span class="fl">0.1</span>, <span class="at">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co"># see 1 in the checklist above</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(<span class="fu">formals</span>(oobag_fun_sroc)) <span class="sc">==</span> <span class="fu">c</span>(<span class="st">&quot;y_mat&quot;</span>, <span class="st">&quot;s_vec&quot;</span>)</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] TRUE TRUE</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>test_output <span class="ot">&lt;-</span> <span class="fu">oobag_fun_sroc</span>(<span class="at">y_mat =</span> y_mat, <span class="at">s_vec =</span> s_vec)</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="co"># test output should be numeric</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="fu">is.numeric</span>(test_output)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="co"># test_output should be a numeric value of length 1</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(test_output) <span class="sc">==</span> <span class="dv">1</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+</div>
+</div>
+<div id="user-supplied-functions-for-negation-importance." class="section level2">
+<h2>User-supplied functions for negation importance.</h2>
+<p>Negation importance is based on the out-of-bag error, so of course
+you may be curious about what negation importance would be if it were
+computed using different statistics. The workflow for doing this is
+exactly the same as the example above, except we have to specify
+<code>importance = &#39;negate&#39;</code> when we fit our model. Also, to speed
+up computations, I am not going to monitor out-of-bag error here.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>fit_sroc <span class="ot">&lt;-</span> <span class="fu">orsf</span>(<span class="at">data =</span> pbc_orsf,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">n_tree =</span> <span class="dv">50</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>                 <span class="at">oobag_pred_horizon =</span> <span class="dv">3500</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">oobag_fun =</span> oobag_fun_sroc,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">importance =</span> <span class="st">&#39;negate&#39;</span>)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>fit_sroc<span class="sc">$</span>importance</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       protime          bili        copper      alk.phos         stage </span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  0.0651135074  0.0449999962  0.0194099922  0.0193764812  0.0185630139 </span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         sex_f           ast          trig      hepato_1     ascites_1 </span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  0.0163615399  0.0130692067  0.0059584829  0.0049877856  0.0046248488 </span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       edema_1     spiders_1   trt_placebo     edema_0.5       albumin </span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  0.0033905063  0.0025556974 -0.0001527407 -0.0020913109 -0.0084313113 </span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;          chol      platelet           age </span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; -0.0116799262 -0.0140180095 -0.0160896260</span></span></code></pre></div>
+</div>
+<div id="i-really-need-to-use-package-x" class="section level2">
+<h2>I really need to use package X</h2>
+<p>You can use any package whatsoever to evaluate out-of-bag
+predictions. You can access the final out-of-bag survival predictions
+from an <code>aorsf</code> model like so:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>pred_oobag <span class="ot">&lt;-</span> fit<span class="sc">$</span>pred_oobag</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>pred_oobag[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, ]</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0.005882353 0.386951908 0.232629282 0.240005660 0.315733470</span></span></code></pre></div>
+<p>Some notes to remember when evaluating out-of-bag error with
+<code>pred_oobag</code>:</p>
+<ul>
+<li><p>the <code>oobag_pred_horizon</code> input in <code>orsf()</code>
+determines the prediction horizon for out-of-bag predictions. The
+prediction horizon is a critical input for evaluation of predictions
+with time-to-event outcomes.</p></li>
+<li><p>Some functions expect predicted risk (i.e., 1 - predicted
+survival), others expect predicted survival.</p></li>
+</ul>
+<p>In most cases, you should also be able to use any package whatsoever
+to compute negation importance. One exception at this point is
+<code>riskRegression</code>, one of my favorite packages. I have
+experimented with <code>riskRegression</code> but found its functions do
+not work as I would expect them to when I try to run them from C++. I
+think this may be due to <code>riskRegression</code>’s internal use of
+<code>data.table</code> and modification by reference, but I do not have
+certainty on that yet.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
