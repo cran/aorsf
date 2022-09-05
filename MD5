@@ -1,7 +1,7 @@
-292f0994b15f3c3adc0a7251cb785bf0 *DESCRIPTION
+fa8b644c991af9042a73b63fe079206d *DESCRIPTION
 a3c74e12fa9df07e838b52c584bbb840 *LICENSE
 45d761e9bca9154702ce480d90859fff *NAMESPACE
-2676496604f6c81d6d1de6fd4b72f581 *NEWS.md
+8c5fe20d7f0f0b40a0753656f1fec084 *NEWS.md
 cbf96630108c6bfc95c3a49dd6a998c7 *R/RcppExports.R
 22ffa3e886374b7bf01a3f1b930e262c *R/aorsf-package.R
 19fef0260d2a5fbc96a04ef6ff0eaa85 *R/check.R
@@ -32,7 +32,7 @@ a9dd3144915134e58610680f6cd99cbb *data/pbc_orsf.rda
 b41882aa225a8b70fdb9f577fc1505aa *inst/CITATION
 a57138013fed9290737721cec90b4a6d *inst/doc/aorsf.R
 ca7653f894950516e383131476ce24c9 *inst/doc/aorsf.Rmd
-b03ff6280af798fcea1e9c072b72b87c *inst/doc/aorsf.html
+3b503629bf6ef1e461da5989a9d405da *inst/doc/aorsf.html
 d21f3c6380262225c769ac8a3a00bd4a *inst/doc/oobag.R
 921e83cf90d55f0c961d959404a324ce *inst/doc/oobag.Rmd
 2143b7811f18fc97b0cb5a40544ae37c *inst/doc/oobag.html
@@ -43,7 +43,7 @@ c73fff47d75bbbe1c99155d6a8f0033d *man/aorsf-package.Rd
 50a72501973f8ba7c838d14c1d58647f *man/as.data.table.orsf_summary_uni.Rd
 2546e4ca0a58c01b6809783d0b3000c4 *man/figures/logo.png
 8d982ae87a834ef2b0dd2d242f1296e9 *man/figures/tree_axis_v_oblique.png
-b201c5cc5d10bc7f29bd14324508917d *man/orsf.Rd
+3dd9a8dd2d84b81f56a3b49e91859269 *man/orsf.Rd
 d379950c18b961a7c85271274175d42b *man/orsf_control_cph.Rd
 8b2f39455b7a028a168c368306da691b *man/orsf_control_custom.Rd
 fe6787bdb5a6e4266bd25ae456aa6c3e *man/orsf_control_fast.Rd
@@ -71,11 +71,11 @@ b891675533f32bff45b73ea44e9826da *tests/testthat.R
 0edc384622a5a28a9397685894361a87 *tests/testthat/test-misc.R
 47107d371b3e0aa9c60840024e7aff7c *tests/testthat/test-newtraph_cph.R
 16eee2efa051364331d9adfb943a3b9e *tests/testthat/test-oobag.R
-8fc15c9f070b76df2f351e1a7aa8c4f8 *tests/testthat/test-orsf.R
+4f4ab0adab2d351fa5533a7252dded7b *tests/testthat/test-orsf.R
 ef44e2b1fe0e0b667c6c7ea496838e40 *tests/testthat/test-orsf_control.R
 df4d2e027c5b62d14817fbf466e05d6a *tests/testthat/test-orsf_interaction.R
 fec6c03a3de9a0c9adeaacb53dc9fcbc *tests/testthat/test-orsf_pd.R
-e331d659fc6320e9d48ea0a648a7c65d *tests/testthat/test-orsf_predict.R
+93c9ee6cc34f35dc9055d6c162d4734c *tests/testthat/test-orsf_predict.R
 e9007f7945da0b246595fabcf54191ea *tests/testthat/test-orsf_print.R
 8956b6e4f7f90208ebdb7e83372a27e2 *tests/testthat/test-orsf_scale_x.R
 94ea4eef900f3f91274c422b0d968894 *tests/testthat/test-orsf_summary.R
