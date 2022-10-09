@@ -13,9 +13,9 @@ Fit, interpret, and make predictions with oblique random survival forests. Obliq
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/bcjaeger/aorsf/}
-  \item \url{https://bcjaeger.github.io/aorsf/}
-  \item Report bugs at \url{https://github.com/bcjaeger/aorsf/issues/}
+  \item \url{https://github.com/ropensci/aorsf}
+  \item \url{https://docs.ropensci.org/aorsf/}
+  \item Report bugs at \url{https://github.com/ropensci/aorsf/issues/}
 }
 
 }
@@ -27,6 +27,8 @@ Other contributors:
   \item Nicholas Pajewski [contributor]
   \item Sawyer Welden \email{swelden@wakehealth.edu} [contributor]
   \item Christopher Jackson \email{chris.jackson@mrc-bsu.cam.ac.uk} [reviewer]
+  \item Marvin Wright [reviewer]
+  \item Lukas Burk [reviewer]
 }
 
 }

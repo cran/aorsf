@@ -10,13 +10,14 @@ knitr::opts_chunk$set(
 
 library(aorsf)
 library(survival)
-library(survivalROC)
+library(SurvMetrics)
 
 
 ## -----------------------------------------------------------------------------
 
 fit <- orsf(data = pbc_orsf, 
             formula = Surv(time, status) ~ . - id,
+            oobag_pred_type = 'surv',
             oobag_pred_horizon = 3500)
 
 hist(fit$pred_oobag, 
@@ -53,11 +54,15 @@ plot(
 
 oobag_fun_brier <- function(y_mat, s_vec){
 
- # risk = 1 - survival 
- r_vec <- 1 - s_vec
-
- # mean of the squared differences between predicted and observed risk
- mean( (y_mat[, 'status'] - r_vec)^2 )
+ # output is numeric vector of length 1
+ as.numeric(
+  SurvMetrics::Brier(
+   object = Surv(time = y_mat[, 1], event = y_mat[, 2]), 
+   pre_sp = s_vec,
+   # t_star in Brier() should match oob_pred_horizon in orsf()
+   t_star = 3500
+  )
+ )
  
 }
 
@@ -88,23 +93,15 @@ plot(
 
 ## -----------------------------------------------------------------------------
 
-oobag_fun_sroc <- function(y_mat, s_vec){
+oobag_fun_tdep_cstat <- function(y_mat, s_vec){
 
- score <- survivalROC::survivalROC(
-  Stime = y_mat[, 'time'],
-  status = y_mat[, 'status'],
-  # risk = 1 - survival
-  marker = 1 - s_vec,
-  # important!! Make sure this matches the time you used in orsf
-  predict.time = 3500,
-  # nearest neighbor estimation for censoring
-  method = "NNE",
-  # value taken from ?survivalROC examples
-  span = 0.25 * nrow(y_mat)^(-0.20)
+ as.numeric(
+  SurvMetrics::Cindex(
+   object = Surv(time = y_mat[, 1], event = y_mat[, 2]), 
+   predicted = s_vec,
+   t_star = 3500
+  )
  )
- 
- # oobag_fun needs to return a numeric value of length 1
- score$AUC
 
 }
 
@@ -112,7 +109,7 @@ fit <- orsf(data = pbc_orsf,
             formula = Surv(time, status) ~ . - id,
             n_tree = 50,
             oobag_pred_horizon = 3500,
-            oobag_fun = oobag_fun_sroc,
+            oobag_fun = oobag_fun_tdep_cstat,
             oobag_eval_every = 1)
 
 plot(
@@ -138,9 +135,9 @@ y_mat <- cbind(time = test_time, status = test_status)
 s_vec <- seq(0.9, 0.1, length.out = 100)
 
 # see 1 in the checklist above
-names(formals(oobag_fun_sroc)) == c("y_mat", "s_vec")
+names(formals(oobag_fun_tdep_cstat)) == c("y_mat", "s_vec")
 
-test_output <- oobag_fun_sroc(y_mat = y_mat, s_vec = s_vec)
+test_output <- oobag_fun_tdep_cstat(y_mat = y_mat, s_vec = s_vec)
 
 # test output should be numeric
 is.numeric(test_output)
@@ -150,20 +147,13 @@ length(test_output) == 1
 
 ## -----------------------------------------------------------------------------
 
-fit_sroc <- orsf(data = pbc_orsf,
+fit_tdep_cstat <- orsf(data = pbc_orsf,
                  formula = Surv(time, status) ~ . - id,
-                 n_tree = 50,
+                 n_tree = 500,
                  oobag_pred_horizon = 3500,
-                 oobag_fun = oobag_fun_sroc,
+                 oobag_fun = oobag_fun_tdep_cstat,
                  importance = 'negate')
 
-fit_sroc$importance
-
-
-## -----------------------------------------------------------------------------
-
-pred_oobag <- fit$pred_oobag
-
-pred_oobag[1:5, ]
+fit_tdep_cstat$importance
 
 

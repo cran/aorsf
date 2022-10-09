@@ -4,14 +4,21 @@
 \alias{predict.orsf_fit}
 \title{Compute predictions using ORSF}
 \usage{
-\method{predict}{orsf_fit}(object, new_data, pred_horizon = NULL, pred_type = "risk", ...)
+\method{predict}{orsf_fit}(
+  object,
+  new_data,
+  pred_horizon = NULL,
+  pred_type = "risk",
+  na_action = "fail",
+  boundary_checks = TRUE,
+  ...
+)
 }
 \arguments{
 \item{object}{(\emph{orsf_fit}) a trained oblique random survival forest
 (see \link{orsf}).}
 
-\item{new_data}{a \link{data.frame}, \link[tibble:tibble-package]{tibble}, or \link[data.table:data.table]{data.table} to compute predictions in.
-Missing data are not currently allowed}
+\item{new_data}{a \link{data.frame}, \link[tibble:tibble-package]{tibble}, or \link[data.table:data.table]{data.table} to compute predictions in.}
 
 \item{pred_horizon}{(\emph{double}) a value or vector indicating the time(s)
 that predictions will be calibrated to. E.g., if you were predicting
@@ -29,6 +36,18 @@ options are
 \item 'mort': mortality prediction
 }}
 
+\item{na_action}{(\emph{character}) what should happen when \code{new_data} contains missing values (i.e., \code{NA} values). Valid options are:
+\itemize{
+\item 'fail' : an error is thrown if \code{new_data} contains \code{NA} values
+\item 'pass' : the output will have \code{NA} in all rows where \code{new_data} has 1 or more \code{NA} value for the predictors used by \code{object}.
+\item 'omit' : rows in \code{new_data} with incomplete data will be dropped
+}}
+
+\item{boundary_checks}{(\emph{logical}) if \code{TRUE}, \code{pred_horizon} will be
+checked to make sure the requested values are less than the maximum
+observed time in \code{object}'s training data. If \code{FALSE}, these checks
+are skipped.}
+
 \item{...}{Further arguments passed to or from other methods (not currently used).}
 }
 \value{
@@ -45,9 +64,13 @@ from an ORSF model.
 used to train \code{object}. Also, factors in \code{new_data} must not have levels
 that were not in the data used to train \code{object}.
 
-\code{pred_horizon} values must not exceed the maximum follow-up time in
-\code{object}'s training data. Also, \code{pred_horizon} values must be entered
-in ascending order.
+\code{pred_horizon} values should not exceed the maximum follow-up time in
+\code{object}'s training data, but if you truly want to do this, set
+\code{boundary_checks = FALSE} and you can use a \code{pred_horizon} as large
+as you want. Note that predictions beyond the maximum follow-up time
+in the \code{object}'s training data are equal to predictions at the
+maximum follow-up time, because \code{aorsf} does not estimate survival
+beyond its maximum observed time.
 
 If unspecified, \code{pred_horizon} may be automatically specified as the value
 used for \code{oobag_pred_horizon} when \code{object} was created (see \link{orsf}).

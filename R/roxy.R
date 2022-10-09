@@ -1,3 +1,4 @@
+# nocov start
 
 # data allowed ------------------------------------------------------------
 
@@ -67,6 +68,26 @@ roxy_oobag_fun_svec <- function(){
 
 roxy_oobag_fun_return <- function(){
  "`oobag_fun` should return a numeric output of length 1"
+}
+
+# oobag_fun ---------------------------------------------------------------
+
+roxy_na_action_header <- function(){
+
+ "(_character_) what should happen when `new_data` contains missing values (i.e., `NA` values). Valid options are:"
+
+}
+
+roxy_na_action_fail <- function(){
+ "'fail' : an error is thrown if `new_data` contains `NA` values"
+}
+
+roxy_na_action_pass <- function(){
+ "'pass' : the output will have `NA` in all rows where `new_data` has 1 or more `NA` value for the predictors used by `object`."
+}
+
+roxy_na_action_omit <- function(){
+ "'omit' : rows in `new_data` with incomplete data will be dropped"
 }
 
 
@@ -150,6 +171,19 @@ roxy_cite_jaeger_2022 <- function(){
 
 }
 
+roxy_cite_hooker_2021 <- function(){
+
+ roxy_cite(
+  authors = "Giles Hooker, Lucas Mentch, Siyu Zhou",
+  title = "Unrestricted Permutation forces Extrapolation: Variable Importance Requires at least One More Model, or There Is No Free Variable Importance",
+  journal = "arXiv e-prints",
+  date = "2021 Oct",
+  number = 'arXiv-1905',
+  url = "https://doi.org/10.48550/arXiv.1905.03151"
+ )
+
+}
+
 roxy_cite_harrell_1982 <- function(){
 
  roxy_cite(
@@ -203,9 +237,9 @@ roxy_dots <- function(){
 roxy_vi_describe <- function(type){
 
  switch(type,
-        'negate' = "Each variable is assessed separately by multiplying the variable's coefficients by -1 and then determining how much the model's performance changes. The worse the model's performance after negating coefficients for a given variable, the more important the variable.",
-        'permute' = "Each variable is assessed separately by randomly permuting the variable's values and then determining how much the model's performance changes. The worse the model's performance after permuting the values of a given variable, the more important the variable.",
-        'anova' = "A p-value is computed for each coefficient in each linear combination of variables in each decision tree. Importance for an individual predictor variable is the proportion of times a p-value for its coefficient is < 0.01.")
+        'negate' = "Each variable is assessed separately by multiplying the variable's coefficients by -1 and then determining how much the model's performance changes. The worse the model's performance after negating coefficients for a given variable, the more important the variable. This technique is promising b/c it does not require permutation and it emphasizes variables with larger coefficients in linear combinations, but it is also relatively new and hasn't been studied as much as permutation importance. See [Jaeger, 2022](https://arxiv.org/abs/2208.01129) for more details on this technique.",
+        'permute' = "Each variable is assessed separately by randomly permuting the variable's values and then determining how much the model's performance changes. The worse the model's performance after permuting the values of a given variable, the more important the variable. This technique is flexible, intuitive, and frequently used. It also has several [known limitations](https://christophm.github.io/interpretable-ml-book/feature-importance.html#disadvantages-9)",
+        'anova' = "A p-value is computed for each coefficient in each linear combination of variables in each decision tree. Importance for an individual predictor variable is the proportion of times a p-value for its coefficient is < 0.01. This technique is very efficient computationally, but may not be as effective as permutation or negation in terms of selecting signal over noise variables. See [Menze, 2011](https://link.springer.com/chapter/10.1007/978-3-642-23783-6_29) for more details on this technique.")
 
 }
 
@@ -232,3 +266,8 @@ roxy_ice_explain <- function(){
  "Unlike partial dependence, which shows the expected prediction as a function of one or multiple predictors, individual conditional expectations (ICE) show the prediction for an individual observation as a function of a predictor."
 }
 
+roxy_pd_limitations <- function(){
+ "Partial dependence has a number of [known limitations and assumptions](https://christophm.github.io/interpretable-ml-book/pdp.html#disadvantages-5) that users should be aware of (see Hooker, 2021). In particular, partial dependence is less intuitive when >2 predictors are examined jointly, and it is assumed that the feature(s) for which the partial dependence is computed are not correlated with other features (this is likely not true in many cases). Accumulated local effect plots can be used (see [here](https://christophm.github.io/interpretable-ml-book/ale.html)) in the case where feature independence is not a valid assumption."
+}
+
+# nocov end

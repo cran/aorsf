@@ -33,7 +33,7 @@
 #' @srrstats {ML1.6b} *Explicit example showing how missing values may be imputed rather than discarded.*
 #' @srrstats {ML6.0} *Reference section explicitly links to aorsf-bench, which includes training and testing stages, and which clearly indicates a need for distinct training and test data sets.*
 #' @srrstats {ML6.1} *clearly document how aorsf can be embedded within a typical full ML workflow.*
-#' @srrstats {ML6.1a} *Embed aorsf within a full workflow using tidymodels, tidyverse, and survivalROC.*
+#' @srrstats {ML6.1a} *Embed aorsf within a full workflow using tidymodels and tidyverse*
 #' @srrstats {ML5.2b} *Documentation includes examples of how to save and re-load trained model objects for their re-use.*
 #' @srrstats {ML2.3} *Values associated with transformations are recorded in the object returned by orsf()*
 #' @srrstats {ML1.3} *Input data are partitioned as training (in-bag) and test (out-of-bag) data within orsf_fit().*
@@ -134,7 +134,7 @@
 #'   - `r roxy_oobag_fun_svec()`
 #'   - `r roxy_oobag_fun_return()`
 #'
-#' For more details, see the out-of-bag [vignette](https://bcjaeger.github.io/aorsf/articles/oobag.html#user-supplied-out-of-bag-evaluation-functions).
+#' For more details, see the out-of-bag [vignette](https://docs.ropensci.org/aorsf/articles/oobag.html#user-supplied-out-of-bag-evaluation-functions).
 #'
 #' @param importance `r roxy_importance_header()`
 #' - `r roxy_importance_none()`
@@ -516,7 +516,7 @@ orsf <- function(data,
           FUN.VALUE = numeric(5))
  }
 
- y  <- as.matrix(select_cols(data, names_y_data))
+ y  <- vet_y(as.matrix(select_cols(data, names_y_data)))
  x  <- as.matrix(ref_code(data, fi, names_x_data))
 
  if(is.null(mtry)) mtry <- ceiling(sqrt(ncol(x)))
@@ -530,24 +530,8 @@ orsf <- function(data,
        call. = FALSE)
 
 
- # Check the outcome variable
- check_arg_type(arg_value = y[, 2],
-                arg_name = "status indicator",
-                expected_type = 'numeric')
-
- check_arg_uni(arg_value = y[, 2],
-               arg_name = "status indicator",
-               expected_uni = c(0,1))
-
  n_events <- sum(y[, 2])
 
- check_arg_type(arg_value = y[, 1],
-                arg_name = "time to event",
-                expected_type = 'numeric')
-
- check_arg_gt(arg_value = y[, 1],
-              arg_name = "time to event",
-              bound = 0)
 
  # some additional checks that are dependent on the outcome variable
 
@@ -849,7 +833,7 @@ orsf_time_to_train <- function(object, n_tree_subset = 50){
 
  time_preproc_start <- Sys.time()
 
- y  <- as.matrix(select_cols(object$data, get_names_y(object)))
+ y  <- vet_y(as.matrix(select_cols(object$data, get_names_y(object))))
 
  x  <- as.matrix(ref_code(object$data,
                           get_fctr_info(object),
@@ -913,7 +897,7 @@ orsf_train_ <- function(object,
  }
 
  if(is.null(y)){
-  y  <- as.matrix(select_cols(object$data, get_names_y(object)))
+  y  <- vet_y(as.matrix(select_cols(object$data, get_names_y(object))))
  }
 
  if(is.null(x)){

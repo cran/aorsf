@@ -55,9 +55,7 @@ check_arg_type <- function(arg_value, arg_name, expected_type){
 #'
 #' @noRd
 
-check_arg_uni <- function(arg_value, arg_name, expected_uni){
-
- uni <- unique(arg_value)
+check_arg_uni <- function(uni, arg_name, expected_uni){
 
  # expected_in_uni <- all(expected_uni %in% uni)
  uni_in_expected <- all(uni %in% expected_uni)
@@ -693,9 +691,9 @@ check_orsf_inputs <- function(data = NULL,
         call. = FALSE)
   }
 
-  formula_deparsed <- deparse1(formula[[3]],
-                               collapse = ' ',
-                               width.cutoff = 500)
+  # browser()
+
+  formula_deparsed <- as.character(formula)[[3]]
 
   for( symbol in c("*", "^", ":", "(", ")", "["," ]", "|", "%") ){
 
@@ -1045,7 +1043,8 @@ check_pd_inputs <- function(object,
                             boundary_checks = NULL,
                             new_data = NULL,
                             pred_horizon = NULL,
-                            pred_type = NULL){
+                            pred_type = NULL,
+                            na_action = NULL){
 
  check_arg_is(arg_value = object,
               arg_name = 'object',
@@ -1204,7 +1203,8 @@ check_pd_inputs <- function(object,
  check_predict(object = object,
                new_data = new_data,
                pred_horizon = pred_horizon,
-               pred_type = pred_type)
+               pred_type = pred_type,
+               na_action = na_action)
 
 }
 
@@ -1479,7 +1479,9 @@ check_units <- function(new_data, ui_train) {
 check_predict <- function(object,
                           new_data = NULL,
                           pred_horizon = NULL,
-                          pred_type = NULL){
+                          pred_type = NULL,
+                          na_action = NULL,
+                          boundary_checks = NULL){
 
  if(!is.null(new_data)){
 
@@ -1513,18 +1515,7 @@ check_predict <- function(object,
                        fi_ref    = get_fctr_info(object),
                        label_new = "new_data")
 
-  #' @srrstats {G2.6} *ensure that one-dimensional inputs are appropriately pre-processed. aorsf does not deal with missing data as many other R packages are very good at dealing with it.*
-
-  #' @srrstats {G2.13} *check for missing data as part of initial pre-processing prior to passing data to analytic algorithms.*
-
-  #' @srrstats {G2.15} *Never pass data with potential missing values to any base routines.*
-
-  if(any(is.na(new_data[, get_names_x(object)]))){
-   stop("Please remove missing values from new_data, or impute them.",
-        call. = FALSE)
-  }
-
-  #' @srrstats {G2.16} *Throw hard errors if undefined values are detected.*
+   #' @srrstats {G2.16} *Throw hard errors if undefined values are detected.*
 
   for(i in c(get_names_x(object))){
 
@@ -1533,7 +1524,7 @@ check_predict <- function(object,
          call. = FALSE)
    }
 
-   # NaN values trigger is.na(), so this probaly isn't needed.
+   # NaN values trigger is.na(), so this probably isn't needed.
    # if(any(is.nan(new_data[[i]]))){
    #  stop("Please remove NaN values from ", i, ".",
    #       call. = FALSE)
@@ -1565,6 +1556,18 @@ check_predict <- function(object,
 
  if(!is.null(pred_horizon)){
 
+  if(!is.null(boundary_checks)){
+
+   check_arg_type(arg_value = boundary_checks,
+                  arg_name = 'boundary_checks',
+                  expected_type = 'logical')
+
+   check_arg_length(arg_value = boundary_checks,
+                    arg_name = 'boundary_checks',
+                    expected_length = 1)
+
+  }
+
   check_arg_type(arg_value = pred_horizon,
                  arg_name = 'pred_horizon',
                  expected_type = 'numeric')
@@ -1575,23 +1578,35 @@ check_predict <- function(object,
 
   if(any(pred_horizon > get_max_time(object))){
 
-   stop("prediction horizon should ",
-        "be <= max follow-up time ",
-        "observed in training data: ",
-        get_max_time(object),
-        call. = FALSE)
+   if(boundary_checks == TRUE){
+    stop("prediction horizon should ",
+         "be <= max follow-up time ",
+         "observed in training data: ",
+         get_max_time(object),
+         call. = FALSE)
+   }
 
-  }
-
-  if(!all(order(pred_horizon) == seq(length(pred_horizon)))){
-   stop("prediction horizons must be entered in ascending order, e.g.,",
-        "pred_horizon = c(5, 10) instead of pred_horizon = c(10, 5)",
-        call. = FALSE)
   }
 
 }
 
+ if(!is.null(na_action)){
 
+  check_arg_type(arg_value = na_action,
+                 arg_name = 'na_action',
+                 expected_type = 'character')
+
+  check_arg_length(arg_value = na_action,
+                   arg_name = 'na_action',
+                   expected_length = 1)
+
+  check_arg_is_valid(arg_value = na_action,
+                     arg_name = 'na_action',
+                     valid_options = c("fail",
+                                       "pass",
+                                       "omit"))
+
+ }
 
 }
 
@@ -1725,5 +1740,32 @@ check_beta_fun <- function(beta_fun){
   "in a testing case where x_node has ", ncol(.x_node), " columns",
   call. = FALSE
  )
+
+}
+
+#' check complete cases in new data
+#'
+#' @param cc (_integer vector_) the indices of complete cases
+#' @param na_action the action to be taken for missing values
+#'   (see orsf_predict)
+#'
+#' @return check functions 'return' errors and the intent is
+#'   to return nothing if nothing is wrong,
+#'   so hopefully nothing is returned.
+#' @noRd
+#'
+
+check_complete_cases <- function(cc, na_action, n_total){
+
+ if(length(cc) != n_total && na_action == 'fail'){
+  stop("Please remove missing values from new_data, or impute them.",
+       call. = FALSE)
+ }
+
+ if(length(cc) == 0){
+  stop("There are no observations in new_data with complete data ",
+       "for the predictors used by this orsf object.",
+       call. = FALSE)
+ }
 
 }

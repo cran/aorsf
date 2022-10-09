@@ -1,54 +1,6 @@
 
 # misc functions used for tests ----
 
-oobag_c_harrell <- function(y_mat, s_vec){
-
- sorted <- order(y_mat[, 1], -y_mat[, 2])
-
- y_mat <- y_mat[sorted, ]
- s_vec <- s_vec[sorted]
-
- time = y_mat[, 1]
- status = y_mat[, 2]
- events = which(status == 1)
-
- k = nrow(y_mat)
-
- total <- 0
- concordant <- 0
-
- for(i in events){
-
-  if(i+1 <= k){
-
-   for(j in seq(i+1, k)){
-
-    if(time[j] > time[i]){
-
-     total <- total + 1
-
-     if(s_vec[j] > s_vec[i]){
-
-      concordant <- concordant + 1
-
-     } else if (s_vec[j] == s_vec[i]){
-
-      concordant <- concordant + 0.5
-
-     }
-
-    }
-
-   }
-
-  }
-
- }
-
- concordant / total
-
-}
-
 cstat_bcj <- function(y_mat, s_vec){
 
  sorted <- order( y_mat[, 1], -y_mat[, 2])
@@ -116,15 +68,69 @@ test_that(
   expect_error(orsf(pbc_temp, f6), 'not_right')
   expect_error(orsf(pbc_temp, f7), 'not_right')
   expect_error(orsf(pbc_temp, f8), 'must have two variables')
-  expect_error(orsf(pbc_temp, f9), 'should contain values of 0 and 1')
+  expect_error(orsf(pbc_temp, f9), 'Did you enter')
   expect_error(orsf(pbc_temp, f10), 'must have two variables')
   expect_error(orsf(pbc_temp, f11), 'should have type')
-  expect_error(orsf(pbc_temp, f12), 'should contain values of 0 and 1')
   expect_error(orsf(pbc_temp, f13), 'must be two sided')
-  expect_error(orsf(pbc_temp, f14), 'should contain values of 0 and 1')
+  expect_error(orsf(pbc_temp, f14), 'Did you enter')
 
  }
 )
+
+# should get the same forest, whether status is 1/2 or 0/1
+
+fit_12 <- orsf(pbc_temp, time + status ~ . -id, n_tree = 10, tree_seeds = 1:10)
+fit_01 <- orsf(pbc_orsf, time + status ~ . -id, n_tree = 10, tree_seeds = 1:10)
+
+test_that(
+ desc = 'long formulas with repetition are allowed',
+ code = {
+
+  x_vars <- c(
+   "trt",
+   "age",
+   "sex",
+   "ascites",
+   "hepato",
+   "spiders",
+   "edema",
+   "bili",
+   "chol",
+   "albumin",
+   "copper",
+   "alk.phos",
+   "ast",
+   "trig",
+   "platelet",
+   "protime",
+   "stage"
+  )
+
+  long_rhs <- paste(x_vars, collapse = ' + ')
+
+  long_rhs <- rep(long_rhs, 15)
+
+  long_rhs <- paste(long_rhs, collapse = ' + ')
+
+  f_long <- as.formula(paste("time + status ~", long_rhs))
+
+  fit_long <- orsf(formula = f_long, pbc_temp, n_tree = 10)
+
+  # fits the orsf as expected
+  expect_s3_class(fit_long, 'orsf_fit')
+  # keeps unique names
+  expect_equal(x_vars, get_names_x(fit_long))
+
+ }
+)
+
+test_that(
+ desc = 'New status, same forest',
+ code = {
+  expect_identical(fit_12$forest, fit_01$forest)
+ }
+)
+
 
 f <- time + status ~ . - id
 
@@ -313,6 +319,7 @@ test_that(
 )
 
 
+# don't want to get booted from cran for a random run-time fail
 
 #' @srrstats {G5.7} **Algorithm performance tests** *test that implementation performs as expected as properties of data change. These tests shows that as data size increases, fit time increases. Conversely, fit time decreases as convergence thresholds increase. Also, fit time decreases as the maximum iterations decrease.*
 
@@ -338,22 +345,23 @@ test_that(
  }
 )
 
+
 test_that(
  desc = "algorithm runs faster with lower convergence tolerance",
  code = {
 
   time_small <- system.time(
    orsf(pbc_orsf,
-        control = orsf_control_cph(iter_max = 50, eps = 1),
+        control = orsf_control_fast(),
         Surv(time, status) ~ . -id,
-        n_tree = 150)
+        n_tree = 500)
   )
 
   time_large <- system.time(
    orsf(pbc_orsf,
         control = orsf_control_cph(iter_max = 50, eps = 1e-10),
         Surv(time, status) ~ . -id,
-        n_tree = 150)
+        n_tree = 500)
   )
 
   expect_true(time_small['elapsed'] < time_large['elapsed'])
@@ -381,6 +389,8 @@ test_that(
 
  }
 )
+
+
 
 
 #' @srrstats {ML7.11} *OOB C-statistic is monitored by this test. As the number of trees in the forest increases, the C-statistic should also increase*
@@ -471,7 +481,7 @@ test_that(
   expect_lt(
    abs(
     fit_orsf$eval_oobag$stat_values -
-    fit_orsf_scale$eval_oobag$stat_values
+     fit_orsf_scale$eval_oobag$stat_values
    ),
    0.01
   )
@@ -920,5 +930,25 @@ test_that(
 
  }
 )
+
+
+# Similar to obliqueRSF?
+# suppressPackageStartupMessages({
+#  library(obliqueRSF)
+# })
+#
+# set.seed(50)
+#
+# fit_aorsf <- orsf(pbc_orsf,
+#                   formula = Surv(time, status) ~ . - id,
+#                   n_tree = 100)
+# fit_obliqueRSF <- ORSF(pbc_orsf, ntree = 100, verbose = FALSE)
+#
+#
+# risk_aorsf <- predict(fit_aorsf, new_data = pbc_orsf, pred_horizon = 3500)
+# risk_obliqueRSF <- 1-predict(fit_obliqueRSF, newdata = pbc_orsf, times = 3500)
+#
+# cor(risk_obliqueRSF, risk_aorsf)
+# plot(risk_obliqueRSF, risk_aorsf)
 
 

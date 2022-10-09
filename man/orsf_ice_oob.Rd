@@ -32,6 +32,7 @@ orsf_ice_new(
   new_data,
   pred_horizon = NULL,
   pred_type = "risk",
+  na_action = "fail",
   expand_grid = TRUE,
   boundary_checks = TRUE,
   ...
@@ -74,15 +75,20 @@ computed at all possible combinations of inputs in \code{pred_spec}. If
 \code{FALSE}, partial dependence will be computed for each variable
 in \code{pred_spec}, separately.}
 
-\item{boundary_checks}{(\emph{logical}) if \code{TRUE}, \code{pred_spec} will be vetted
+\item{boundary_checks}{(\emph{logical}) if \code{TRUE}, \code{pred_spec} will be checked
 to make sure the requested values are between the 10th and 90th
 percentile in the object's training data. If \code{FALSE}, these checks are
 skipped.}
 
 \item{...}{Further arguments passed to or from other methods (not currently used).}
 
-\item{new_data}{a \link{data.frame}, \link[tibble:tibble-package]{tibble}, or \link[data.table:data.table]{data.table} to compute predictions in.
-Missing data are not currently allowed}
+\item{new_data}{a \link{data.frame}, \link[tibble:tibble-package]{tibble}, or \link[data.table:data.table]{data.table} to compute predictions in.}
+
+\item{na_action}{(\emph{character}) what should happen when \code{new_data} contains missing values (i.e., \code{NA} values). Valid options are:
+\itemize{
+\item 'fail' : an error is thrown if \code{new_data} contains \code{NA} values
+\item 'omit' : rows in \code{new_data} with incomplete data will be dropped
+}}
 }
 \value{
 a \link[data.table:data.table]{data.table} containing
@@ -140,22 +146,21 @@ ice_oob <- orsf_ice_oob(fit, pred_spec, boundary_checks = FALSE)
 ice_oob
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##       pred_horizon id_variable id_row  bili      pred
-##              <num>       <int>  <int> <num>     <num>
-##    1:         1788           1      1     1 0.9066901
-##    2:         1788           1      2     1 0.1018084
-##    3:         1788           1      3     1 0.7839188
-##    4:         1788           1      4     1 0.3901363
-##    5:         1788           1      5     1 0.1250285
-##   ---                                                
-## 6896:         1788          25    272    10 0.3948899
-## 6897:         1788          25    273    10 0.4759938
-## 6898:         1788          25    274    10 0.4406426
-## 6899:         1788          25    275    10 0.3330580
-## 6900:         1788          25    276    10 0.5652151
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##       pred_horizon id_variable id_row bili      pred
+##    1:         1788           1      1    1 0.9066901
+##    2:         1788           1      2    1 0.1018084
+##    3:         1788           1      3    1 0.7839188
+##    4:         1788           1      4    1 0.3901363
+##    5:         1788           1      5    1 0.1250285
+##   ---                                               
+## 6896:         1788          25    272   10 0.3948899
+## 6897:         1788          25    273   10 0.4759938
+## 6898:         1788          25    274   10 0.4406426
+## 6899:         1788          25    275   10 0.3330580
+## 6900:         1788          25    276   10 0.5652151
 }\if{html}{\out{</div>}}
 
 Much more detailed examples are given in the
-\href{https://bcjaeger.github.io/aorsf/articles/pd.html#individual-conditional-expectations-ice}{vignette}
+\href{https://docs.ropensci.org/aorsf/articles/pd.html#individual-conditional-expectations-ice}{vignette}
 }
 

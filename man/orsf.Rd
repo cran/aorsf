@@ -128,7 +128,7 @@ trees. When \code{oobag_fun = NULL} (the default), Harrell's C-statistic (1982) 
 \item \code{oobag_fun} should return a numeric output of length 1
 }
 
-For more details, see the out-of-bag \href{https://bcjaeger.github.io/aorsf/articles/oobag.html#user-supplied-out-of-bag-evaluation-functions}{vignette}.}
+For more details, see the out-of-bag \href{https://docs.ropensci.org/aorsf/articles/oobag.html#user-supplied-out-of-bag-evaluation-functions}{vignette}.}
 
 \item{importance}{(\emph{character}) Indicate method for variable importance:
 \itemize{
@@ -268,94 +268,19 @@ such as \code{recipes} or \code{mlr3pipelines}.
 }
 
 \section{Examples}{
+First we load some relevant packages
+
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{set.seed(329730)
-
-library(aorsf)
-library(survival)
-library(tidymodels)
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{## -- Attaching packages ------------------------------ tidymodels 0.2.0 --
-
-## v broom        1.0.0     v recipes      1.0.1
-## v dials        0.1.1     v rsample      0.1.1
-## v dplyr        1.0.9     v tibble       3.1.7
-## v ggplot2      3.3.6     v tidyr        1.2.0
-## v infer        1.0.0     v tune         0.2.0
-## v modeldata    0.1.1     v workflows    0.2.6
-## v parsnip      1.0.0     v workflowsets 0.2.1
-## v purrr        0.3.4     v yardstick    0.0.9
-
-## -- Conflicts --------------------------------- tidymodels_conflicts() --
-## x dplyr::between()      masks aorsf::between()
-## x purrr::discard()      masks scales::discard()
-## x dplyr::filter()       masks stats::filter()
-## x dplyr::first()        masks aorsf::first()
-## x purrr::is_null()      masks testthat::is_null()
-## x recipes::is_trained() masks aorsf::is_trained()
-## x dplyr::lag()          masks stats::lag()
-## x dplyr::last()         masks aorsf::last()
-## x tidyr::matches()      masks rsample::matches(), dplyr::matches(), testthat::matches()
-## x recipes::step()       masks stats::step()
-## x purrr::transpose()    masks aorsf::transpose()
-## * Use suppressPackageStartupMessages() to eliminate package startup messages
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(tidyverse)
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{## -- Attaching packages ------------------------------- tidyverse 1.3.1 --
-
-## v readr   2.1.2     v forcats 0.5.1
-## v stringr 1.4.0
-
-## -- Conflicts ---------------------------------- tidyverse_conflicts() --
-## x dplyr::between()       masks aorsf::between()
-## x readr::col_factor()    masks scales::col_factor()
-## x purrr::discard()       masks scales::discard()
-## x readr::edition_get()   masks testthat::edition_get()
-## x dplyr::filter()        masks stats::filter()
-## x dplyr::first()         masks aorsf::first()
-## x stringr::fixed()       masks recipes::fixed()
-## x purrr::is_null()       masks testthat::is_null()
-## x dplyr::lag()           masks stats::lag()
-## x dplyr::last()          masks aorsf::last()
-## x readr::local_edition() masks testthat::local_edition()
-## x tidyr::matches()       masks rsample::matches(), dplyr::matches(), testthat::matches()
-## x readr::spec()          masks yardstick::spec()
-## x purrr::transpose()     masks aorsf::transpose()
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(randomForestSRC)
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{## 
-##  randomForestSRC 3.0.2 
-##  
-##  Type rfsrc.news() to see new features, changes, and bug fixes. 
-## 
-
-## 
-## Attaching package: 'randomForestSRC'
-
-## The following object is masked from 'package:tune':
-## 
-##     tune
-
-## The following object is masked from 'package:purrr':
-## 
-##     partial
-
-## The following object is masked from 'package:parsnip':
-## 
-##     tune
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(ranger)
-library(riskRegression)
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{## riskRegression version 2022.03.22
+suppressPackageStartupMessages(\{
+ library(aorsf)
+ library(survival)
+ library(tidymodels)
+ library(tidyverse)
+ library(randomForestSRC)
+ library(ranger)
+ library(riskRegression) 
+ library(obliqueRSF)
+\})
 }\if{html}{\out{</div>}}
 
 The entry-point into \code{aorsf} is the standard call to \code{orsf()}:
@@ -559,18 +484,18 @@ analyses
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{## #  10-fold cross-validation 
 ## # A tibble: 10 x 5
-##    splits           id     recipe   train               test    
-##    <list>           <chr>  <list>   <list>              <list>  
-##  1 <split [248/28]> Fold01 <recipe> <tibble [248 x 20]> <tibble>
-##  2 <split [248/28]> Fold02 <recipe> <tibble [248 x 20]> <tibble>
-##  3 <split [248/28]> Fold03 <recipe> <tibble [248 x 20]> <tibble>
-##  4 <split [248/28]> Fold04 <recipe> <tibble [248 x 20]> <tibble>
-##  5 <split [248/28]> Fold05 <recipe> <tibble [248 x 20]> <tibble>
-##  6 <split [248/28]> Fold06 <recipe> <tibble [248 x 20]> <tibble>
-##  7 <split [249/27]> Fold07 <recipe> <tibble [249 x 20]> <tibble>
-##  8 <split [249/27]> Fold08 <recipe> <tibble [249 x 20]> <tibble>
-##  9 <split [249/27]> Fold09 <recipe> <tibble [249 x 20]> <tibble>
-## 10 <split [249/27]> Fold10 <recipe> <tibble [249 x 20]> <tibble>
+##    splits           id     recipe   train               test              
+##    <list>           <chr>  <list>   <list>              <list>            
+##  1 <split [248/28]> Fold01 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
+##  2 <split [248/28]> Fold02 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
+##  3 <split [248/28]> Fold03 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
+##  4 <split [248/28]> Fold04 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
+##  5 <split [248/28]> Fold05 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
+##  6 <split [248/28]> Fold06 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
+##  7 <split [249/27]> Fold07 <recipe> <tibble [249 x 20]> <tibble [27 x 20]>
+##  8 <split [249/27]> Fold08 <recipe> <tibble [249 x 20]> <tibble [27 x 20]>
+##  9 <split [249/27]> Fold09 <recipe> <tibble [249 x 20]> <tibble [27 x 20]>
+## 10 <split [249/27]> Fold10 <recipe> <tibble [249 x 20]> <tibble [27 x 20]>
 }\if{html}{\out{</div>}}
 
 Define functions for a ‘workflow’ with \code{randomForestSRC}, \code{ranger}, and
@@ -629,29 +554,29 @@ glimpse(results)
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{## Rows: 276
 ## Columns: 23
-## $ id          <int> 7, 36, 52, 65, 67, 72, 79, 88, 89, 100, 127, 154, ~
-## $ trt         <fct> placebo, placebo, d_penicill_main, d_penicill_main~
-## $ age         <dbl> 55.53457, 56.41068, 50.54073, 40.20260, 51.28816, ~
-## $ sex         <fct> f, f, m, f, f, f, f, f, f, m, f, m, f, m, f, f, f,~
-## $ ascites     <fct> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,~
-## $ hepato      <fct> 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0,~
-## $ spiders     <fct> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,~
-## $ edema       <fct> 0, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 0, 0, 0, ~
-## $ bili        <dbl> 1.0, 0.3, 6.0, 1.2, 1.1, 0.5, 0.8, 0.6, 2.0, 2.3, ~
-## $ chol        <int> 322, 172, 614, 256, 466, 320, 315, 296, 408, 178, ~
-## $ albumin     <dbl> 4.09, 3.39, 3.70, 3.60, 3.91, 3.54, 4.24, 4.06, 3.~
-## $ copper      <int> 52, 18, 158, 74, 84, 51, 13, 37, 50, 145, 9, 225, ~
-## $ alk.phos    <dbl> 824.0, 558.0, 5084.4, 724.0, 1787.0, 1243.0, 1637.~
-## $ ast         <dbl> 60.45, 71.30, 206.40, 141.05, 328.60, 122.45, 170.~
-## $ trig        <int> 213, 96, 93, 108, 185, 80, 70, 83, 98, 122, 95, 75~
-## $ platelet    <int> 204, 311, 362, 430, 261, 225, 426, 442, 200, 119, ~
-## $ protime     <dbl> 9.7, 10.6, 10.6, 10.0, 10.0, 10.0, 10.9, 12.0, 11.~
-## $ stage       <ord> 3, 2, 1, 1, 3, 3, 3, 3, 2, 4, 2, 3, 2, 4, 4, 3, 3,~
-## $ time        <int> 1832, 3611, 2386, 3992, 2769, 4184, 3707, 2452, 17~
-## $ status      <dbl> 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0,~
-## $ pred_aorsf  <dbl> 0.14427839, 0.01870334, 0.51377784, 0.04334777, 0.~
-## $ pred_rfsrc  <dbl> 0.14732022, 0.03156261, 0.55773866, 0.06502143, 0.~
-## $ pred_ranger <dbl> 0.14870388, 0.01662689, 0.57519043, 0.05876898, 0.~
+## $ id          <int> 7, 36, 52, 65, 67, 72, 79, 88, 89, 100, 127, 154, 161,~
+## $ trt         <fct> placebo, placebo, d_penicill_main, d_penicill_main, pl~
+## $ age         <dbl> 55.53457, 56.41068, 50.54073, 40.20260, 51.28816, 32.4~
+## $ sex         <fct> f, f, m, f, f, f, f, f, f, m, f, m, f, m, f, f, f, f, ~
+## $ ascites     <fct> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ~
+## $ hepato      <fct> 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, ~
+## $ spiders     <fct> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, ~
+## $ edema       <fct> 0, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0~
+## $ bili        <dbl> 1.0, 0.3, 6.0, 1.2, 1.1, 0.5, 0.8, 0.6, 2.0, 2.3, 0.5,~
+## $ chol        <int> 322, 172, 614, 256, 466, 320, 315, 296, 408, 178, 268,~
+## $ albumin     <dbl> 4.09, 3.39, 3.70, 3.60, 3.91, 3.54, 4.24, 4.06, 3.65, ~
+## $ copper      <int> 52, 18, 158, 74, 84, 51, 13, 37, 50, 145, 9, 225, 4, 2~
+## $ alk.phos    <dbl> 824.0, 558.0, 5084.4, 724.0, 1787.0, 1243.0, 1637.0, 1~
+## $ ast         <dbl> 60.45, 71.30, 206.40, 141.05, 328.60, 122.45, 170.50, ~
+## $ trig        <int> 213, 96, 93, 108, 185, 80, 70, 83, 98, 122, 95, 75, 18~
+## $ platelet    <int> 204, 311, 362, 430, 261, 225, 426, 442, 200, 119, 453,~
+## $ protime     <dbl> 9.7, 10.6, 10.6, 10.0, 10.0, 10.0, 10.9, 12.0, 11.4, 1~
+## $ stage       <ord> 3, 2, 1, 1, 3, 3, 3, 3, 2, 4, 2, 3, 2, 4, 4, 3, 3, 3, ~
+## $ time        <int> 1832, 3611, 2386, 3992, 2769, 4184, 3707, 2452, 1741, ~
+## $ status      <dbl> 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, ~
+## $ pred_aorsf  <dbl> 0.14427839, 0.01870334, 0.51377784, 0.04334777, 0.2191~
+## $ pred_rfsrc  <dbl> 0.14732022, 0.03156261, 0.55773866, 0.06502143, 0.1619~
+## $ pred_ranger <dbl> 0.14870388, 0.01662689, 0.57519043, 0.05876898, 0.1488~
 }\if{html}{\out{</div>}}
 
 And finish by aggregating the predictions and computing performance in
@@ -736,7 +661,168 @@ From inspection,
 
 \subsection{mlr3 pipelines}{
 
-this is on hold while \code{mlr3proba} goes through major updates.
+\strong{Warning}: this code may or may not run depending on your current
+version of \code{mlr3proba}. First we load some additional \code{mlr3} libraries.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{suppressPackageStartupMessages(\{
+ library(mlr3verse)
+ library(mlr3proba)
+ library(mlr3extralearners)
+ library(mlr3viz)
+ library(mlr3benchmark)
+\})
+}\if{html}{\out{</div>}}
+
+Next we’ll define some tasks for our learners to engage with.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Mayo Clinic Primary Biliary Cholangitis Data
+task_pbc <- 
+ TaskSurv$new(
+  id = 'pbc',  
+  backend = select(pbc_orsf, -id) \%>\% 
+   mutate(stage = as.numeric(stage)),  
+  time = "time", 
+  event = "status"
+ )
+
+# Veteran's Administration Lung Cancer Trial
+data(veteran, package = "randomForestSRC")
+
+task_veteran <- 
+ TaskSurv$new(
+  id = 'veteran',  
+  backend = veteran,  
+  time = "time", 
+  event = "status"
+ )
+
+# NKI 70 gene signature
+data_nki <- OpenML::getOMLDataSet(data.id = 1228)
+
+task_nki <- 
+ TaskSurv$new(
+  id = 'nki',  
+  backend = data_nki$data,  
+  time = "time", 
+  event = "event"
+ )
+
+# Gene Expression-Based Survival Prediction in Lung Adenocarcinoma
+data_lung <- OpenML::getOMLDataSet(data.id = 1245)
+
+task_lung <- 
+ TaskSurv$new(
+  id = 'nki',  
+  backend = data_lung$data \%>\% 
+   mutate(OS_event = as.numeric(OS_event) -1),  
+  time = "OS_years", 
+  event = "OS_event"
+ )
+
+
+# Chemotherapy for Stage B/C colon cancer
+# (there are two rows per person, one for death 
+#  and the other for recurrence, hence the two tasks)
+
+task_colon_death <-
+ TaskSurv$new(
+  id = 'colon_death',  
+  backend = survival::colon \%>\%
+   filter(etype == 2) \%>\% 
+   drop_na() \%>\% 
+   # drop id, redundant variables
+   select(-id, -study, -node4, -etype),
+   mutate(OS_event = as.numeric(OS_event) -1),  
+  time = "time", 
+  event = "status"
+ )
+
+task_colon_recur <-
+ TaskSurv$new(
+  id = 'colon_death',  
+  backend = survival::colon \%>\%
+   filter(etype == 1) \%>\% 
+   drop_na() \%>\% 
+   # drop id, redundant variables
+   select(-id, -study, -node4, -etype),
+   mutate(OS_event = as.numeric(OS_event) -1),  
+  time = "time", 
+  event = "status"
+ )
+
+# putting them all together
+tasks <- list(task_pbc,
+              task_veteran,
+              task_nki,
+              task_lung,
+              task_colon_death,
+              task_colon_recur,
+              # add a few more pre-made ones
+              tsk("actg"),
+              tsk('gbcs'),
+              tsk('grace'),
+              tsk("unemployment"),
+              tsk("whas"))
+}\if{html}{\out{</div>}}
+
+Now we can make a benchmark designed to compare our three favorite
+learners:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Learners with default parameters
+learners <- lrns(c("surv.ranger", "surv.rfsrc", "surv.aorsf"))
+
+# Brier (Graf) score, c-index and training time as measures
+measures <- msrs(c("surv.graf", "surv.cindex", "time_train"))
+
+# Benchmark with 5-fold CV
+design <- benchmark_grid(
+  tasks = tasks,
+  learners = learners,
+  resamplings = rsmps("cv", folds = 5)
+)
+
+benchmark_result <- benchmark(design)
+
+bm_scores <- benchmark_result$score(measures, predict_sets = "test")
+}\if{html}{\out{</div>}}
+
+Let’s look at the overall results:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{bm_scores \%>\%
+ select(task_id, learner_id, surv.graf, surv.cindex, time_train) \%>\%
+ group_by(learner_id) \%>\% 
+ filter(!is.infinite(surv.graf)) \%>\% 
+ summarize(
+  across(
+   .cols = c(surv.graf, surv.cindex, time_train),
+   .fns = mean, 
+   na.rm = TRUE
+  )
+ )
+}\if{html}{\out{</div>}}
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## # A tibble: 3 x 4
+##   learner_id  surv.graf surv.cindex time_train
+##   <chr>           <dbl>       <dbl>      <dbl>
+## 1 surv.aorsf      0.151       0.729      0.345
+## 2 surv.ranger     0.167       0.706      2.54 
+## 3 surv.rfsrc      0.156       0.715      0.783
+}\if{html}{\out{</div>}}
+
+From inspection,
+\itemize{
+\item \code{aorsf} appears to have a higher expected value for ‘surv.cindex’
+(higher is better)
+\item \code{aorsf} appears to have a lower expected value for ‘surv.graf’
+(lower is better)
+\item \code{aorsf} has the lowest training time.
+}
+
+the lower training time for \code{aorsf} is likely due to the fact that there
+are many unique event times in the benchmark tasks. \code{ranger} and \code{rfsrc}
+create grids of time points based on each unique event time in each leaf
+of each decision tree, whereas \code{aorsf} also uses a grid but restricts it
+to the unique event times among observations in the current leaf.
 }
 }
 

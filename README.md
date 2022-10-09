@@ -1,19 +1,22 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# aorsf <a href="https://bcjaeger.github.io/aorsf/"><img src="man/figures/logo.png" align="right" height="138" /></a>
+# aorsf <a href="https://docs.ropensci.org/aorsf/"><img src="man/figures/logo.png" align="right" height="138" /></a>
 
 <!-- badges: start -->
 
-[![Project Status: WIP – Initial development is in progress, but there
-has not yet been a stable, usable release suitable for the
-public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+[![Project Status: Active – The project has reached a stable, usable
+state and is being actively
+developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![Codecov test
 coverage](https://codecov.io/gh/bcjaeger/aorsf/branch/master/graph/badge.svg)](https://app.codecov.io/gh/bcjaeger/aorsf?branch=master)
-[![R-CMD-check](https://github.com/bcjaeger/aorsf/workflows/R-CMD-check/badge.svg)](https://github.com/bcjaeger/aorsf/actions/)
+[![R-CMD-check](https://github.com/bcjaeger/aorsf/workflows/R-CMD-check/badge.svg)](https://github.com/ropensci/aorsf/actions/)
 [![Status at rOpenSci Software Peer
 Review](https://badges.ropensci.org/532_status.svg)](https://github.com/ropensci/software-review/issues/532/)
-<a href="https://joss.theoj.org/papers/414871f081cd8449007d671a7f7f7c3a"><img src="https://joss.theoj.org/papers/414871f081cd8449007d671a7f7f7c3a/status.svg"></a>
+<a href="https://joss.theoj.org/papers/10.21105/joss.04705"><img src="https://joss.theoj.org/papers/10.21105/joss.04705/status.svg"></a>
+[![CRAN
+status](https://www.r-pkg.org/badges/version/aorsf)](https://CRAN.R-project.org/package=aorsf)
+[![DOI](https://zenodo.org/badge/394311897.svg)](https://zenodo.org/badge/latestdoi/394311897)
 <!-- badges: end -->
 
 Fit, interpret, and make predictions with oblique random survival
@@ -34,12 +37,18 @@ forests (ORSFs).
 
 ## Installation
 
+You can install `aorsf` from CRAN using
+
+``` r
+install.packages("aorsf")
+```
+
 You can install the development version of aorsf from
 [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("remotes")
-remotes::install_github("bcjaeger/aorsf")
+remotes::install_github("ropensci/aorsf")
 ```
 
 ## What is an oblique decision tree?
@@ -112,11 +121,11 @@ fit
 ```
 
 -   See
-    [print.orsf_fit](https://bcjaeger.github.io/aorsf/reference/print.orsf_fit.html)
+    [print.orsf_fit](https://docs.ropensci.org/aorsf/reference/print.orsf_fit.html)
     for a description of each line in the printed output.
 
 -   See [orsf
-    examples](https://bcjaeger.github.io/aorsf/reference/orsf.html#examples)
+    examples](https://docs.ropensci.org/aorsf/reference/orsf.html#examples)
     for more details on controlling ORSF ensemble fits and using them in
     prediction modeling workflows.
 
@@ -129,7 +138,12 @@ using `aorsf`:
     multiplying the variable’s coefficients by -1 and then determining
     how much the model’s performance changes. The worse the model’s
     performance after negating coefficients for a given variable, the
-    more important the variable.
+    more important the variable. This technique is promising b/c it does
+    not require permutation and it emphasizes variables with larger
+    coefficients in linear combinations, but it is also relatively new
+    and hasn’t been studied as much as permutation importance. See
+    [Jaeger, 2022](https://arxiv.org/abs/2208.01129) for more details on
+    this technique.
 
     ``` r
     orsf_vi_negate(fit)
@@ -145,7 +159,9 @@ using `aorsf`:
     permuting the variable’s values and then determining how much the
     model’s performance changes. The worse the model’s performance after
     permuting the values of a given variable, the more important the
-    variable.
+    variable. This technique is flexible, intuitive, and frequently
+    used. It also has several [known
+    limitations](https://christophm.github.io/interpretable-ml-book/feature-importance.html#disadvantages-9)
 
     ``` r
     orsf_vi_permute(fit)
@@ -161,6 +177,11 @@ using `aorsf`:
     for each coefficient in each linear combination of variables in each
     decision tree. Importance for an individual predictor variable is
     the proportion of times a p-value for its coefficient is \< 0.01.
+    This technique is very efficient computationally, but may not be as
+    effective as permutation or negation in terms of selecting signal
+    over noise variables. See [Menze,
+    2011](https://link.springer.com/chapter/10.1007/978-3-642-23783-6_29)
+    for more details on this technique.
 
     ``` r
     orsf_vi_anova(fit)
@@ -175,7 +196,7 @@ using `aorsf`:
 You can supply your own R function to estimate out-of-bag error when
 using negation or permutation importance. This feature is experimental
 and may be changed in the future (see [oob
-vignette](https://bcjaeger.github.io/aorsf/articles/oobag.html))
+vignette](https://docs.ropensci.org/aorsf/articles/oobag.html))
 
 ### Partial dependence (PD)
 
@@ -186,7 +207,7 @@ something like a multivariable adjusted estimate of the model’s
 prediction.
 
 For more on PD, see the
-[vignette](https://bcjaeger.github.io/aorsf/articles/pd.html)
+[vignette](https://docs.ropensci.org/aorsf/articles/pd.html)
 
 ### Individual conditional expectations (ICE)
 
@@ -196,7 +217,7 @@ expectations (ICE) show the prediction for an individual observation as
 a function of a predictor.
 
 For more on ICE, see the
-[vignette](https://bcjaeger.github.io/aorsf/articles/pd.html#individual-conditional-expectations-ice)
+[vignette](https://docs.ropensci.org/aorsf/articles/pd.html#individual-conditional-expectations-ice)
 
 ## Comparison to existing software
 
@@ -221,7 +242,7 @@ Comparisons between `aorsf` and existing software are presented in our
 
 A more hands-on comparison of `aorsf` and other R packages is provided
 in [orsf
-examples](https://bcjaeger.github.io/aorsf/reference/orsf.html#tidymodels)
+examples](https://docs.ropensci.org/aorsf/reference/orsf.html#tidymodels)
 
 ## References
 

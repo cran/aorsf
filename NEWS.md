@@ -1,10 +1,22 @@
-# aorsf 0.0.0.9000
+# aorsf 0.0.3
 
-* Core features implemented: fit, interpret, and predict using oblique random survival forests.
+* Included rOpenSci reviewers Christopher Jackson, Marvin N Wright, and Lukas Burk in `DESCRIPTION` as reviewers. Thank you!
 
-* Vignettes + Readme covering usage of core features.
+* Added clarification to docs about pros/cons of different variable importance techniques
 
-* Website hosted through GitHub pages, managed with `pkgdown`.
+* Added regression tests for `aorsf` versus `obliqueRSF` (they should be similar)
+
+* Additional support and tests for functions with long right hand sides
+
+* Updated out-of-bag vignette with more appropriate custom functions.
+
+* Allow status values in input data to be more general, i.e., not just 0 and 1.
+
+* Allow missing values in `predict` functions, including partial dependence.
+
+# aorsf 0.0.2
+
+* Modified unit tests for compatibility with extra checks run through CRAN.
 
 # aorsf 0.0.1
 
@@ -14,6 +26,11 @@
 
 * Added `chf` and `mort` options to `predict.orsf_fit()`. Mortality predictions are not fully implemented yet - they are not supported in partial dependence or out-of-bag error estimates. These features will be added in a future update.
 
-# aorsf 0.0.2
+# aorsf 0.0.0.9000
 
-* Modified unit tests for compatibility with extra checks run through CRAN.
+* Core features implemented: fit, interpret, and predict using oblique random survival forests.
+
+* Vignettes + Readme covering usage of core features.
+
+* Website hosted through GitHub pages, managed with `pkgdown`.
+
