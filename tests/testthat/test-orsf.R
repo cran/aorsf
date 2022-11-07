@@ -49,7 +49,7 @@ f7 <- Surv(not_right, status) ~ .
 f8 <- Surv(start, time, status) ~ .
 f9 <- Surv(status, time) ~ . - id
 f10 <- Surv(time, time) ~ . - id
-f11 <- Surv(time, hepato) ~ . -id
+f11 <- Surv(time, id) ~ . -id
 f12 <- Surv(time, status) ~ . -id
 f13 <- ~ .
 f14 <- status + time ~ . - id
@@ -70,17 +70,12 @@ test_that(
   expect_error(orsf(pbc_temp, f8), 'must have two variables')
   expect_error(orsf(pbc_temp, f9), 'Did you enter')
   expect_error(orsf(pbc_temp, f10), 'must have two variables')
-  expect_error(orsf(pbc_temp, f11), 'should have type')
+  expect_error(orsf(pbc_temp, f11), 'detected >1 event type')
   expect_error(orsf(pbc_temp, f13), 'must be two sided')
   expect_error(orsf(pbc_temp, f14), 'Did you enter')
 
  }
 )
-
-# should get the same forest, whether status is 1/2 or 0/1
-
-fit_12 <- orsf(pbc_temp, time + status ~ . -id, n_tree = 10, tree_seeds = 1:10)
-fit_01 <- orsf(pbc_orsf, time + status ~ . -id, n_tree = 10, tree_seeds = 1:10)
 
 test_that(
  desc = 'long formulas with repetition are allowed',
@@ -124,10 +119,41 @@ test_that(
  }
 )
 
+# should get the same forest, whether status is 1/2 or 0/1 or a surv object
+
+pbc_surv <- Surv(pbc_temp$time, pbc_temp$status)
+pbc_surv_data <- cbind(pbc_temp, surv_object=pbc_surv)
+
+fit_surv <- orsf(pbc_surv_data,
+                 formula = surv_object ~ . - id - time - status,
+                 n_tree = 10,
+                 tree_seed = 1:10)
+
+fit_surv_untrained <- orsf(pbc_surv_data,
+                           formula = surv_object ~ . - id - time - status,
+                           n_tree = 10,
+                           tree_seed = 1:10,
+                           no_fit = TRUE)
+
+fit_surv_trained <- orsf_train(fit_surv_untrained)
+
+fit_12 <- orsf(pbc_temp,
+               formula = Surv(time, status) ~ . -id,
+               n_tree = 10,
+               tree_seeds = 1:10)
+
+fit_01 <- orsf(pbc_orsf,
+               formula = time + status ~ . -id,
+               n_tree = 10,
+               tree_seeds = 1:10)
+
+
 test_that(
  desc = 'New status, same forest',
  code = {
   expect_identical(fit_12$forest, fit_01$forest)
+  expect_identical(fit_surv$forest, fit_01$forest)
+  expect_identical(fit_surv_trained$forest, fit_01$forest)
  }
 )
 
@@ -170,7 +196,7 @@ test_that(
 
   expect_s3_class(orsf(as.data.table(pbc_orsf), f,
                        control = orsf_control_net(),
-                       n_tree = 1), 'orsf_fit')
+                       n_tree = 3), 'orsf_fit')
  }
 )
 
@@ -248,10 +274,16 @@ test_that(
 
 )
 
-fit_with_vi <- orsf(data = pbc_orsf,
+data_fit <- copy(pbc_orsf)
+
+fit_with_vi <- orsf(data = data_fit,
                     formula = Surv(time, status) ~ . - id,
                     importance = 'negate',
                     n_tree = 50)
+
+test_that("data are not unintentionally modified by reference",
+          code = {expect_identical(data_fit, pbc_orsf)})
+
 
 fit_no_vi <- orsf(data = pbc_orsf,
                   formula = Surv(time, status) ~ . - id,
@@ -318,8 +350,6 @@ test_that(
  }
 )
 
-
-# don't want to get booted from cran for a random run-time fail
 
 #' @srrstats {G5.7} **Algorithm performance tests** *test that implementation performs as expected as properties of data change. These tests shows that as data size increases, fit time increases. Conversely, fit time decreases as convergence thresholds increase. Also, fit time decreases as the maximum iterations decrease.*
 
@@ -391,8 +421,6 @@ test_that(
 )
 
 
-
-
 #' @srrstats {ML7.11} *OOB C-statistic is monitored by this test. As the number of trees in the forest increases, the C-statistic should also increase*
 
 test_that(
@@ -436,12 +464,67 @@ pbc_temp <- pbc_orsf
 pbc_temp[, 'bili'] <- NA_real_
 
 test_that(
- desc = "data with missing values are rejected",
+ desc = "Data with all-`NA` fields or columns are rejected",
  code = {
-  expect_error(orsf(pbc_temp, time + status ~ . - id),
-               'missing values')
+  expect_error(orsf(pbc_temp, time + status ~ . - id,
+                    na_action = 'omit'),
+               'column bili has no observed values')
+
+  expect_error(orsf(pbc_temp, time + status ~ . - id,
+                    na_action = 'impute_meanmode'),
+               'column bili has no observed values')
+
  }
 )
+
+pbc_temp$bili[1:10] <- 12
+
+test_that(
+ desc = "data with missing values are rejected when na_action is fail",
+ code = {
+
+  expect_error(orsf(pbc_temp, time + status ~ . - id),
+               'missing values')
+
+
+ }
+)
+
+pbc_temp <- copy(pbc_orsf)
+pbc_temp[1:10, 'bili'] <- NA_real_
+pbc_temp_orig <- copy(pbc_temp)
+
+test_that(
+ desc = 'missing data are dropped when na_action is omit',
+ code = {
+
+  fit_omit <- orsf(pbc_temp, time + status ~ .-id,  na_action = 'omit')
+  expect_equal(nrow(fit_omit$data),
+               nrow(stats::na.omit(pbc_temp)))
+
+ }
+)
+
+test_that(
+ desc = 'missing data are imputed when na_action is impute_meanmode',
+ code = {
+
+  fit_impute <- orsf(pbc_temp,
+                     time + status ~ .,
+                     na_action = 'impute_meanmode')
+
+  expect_equal(fit_impute$data$bili[1:10],
+               rep(mean(pbc_temp$bili, na.rm=TRUE), 10))
+
+  expect_equal(fit_impute$data$bili[-c(1:10)],
+               pbc_temp$bili[-c(1:10)])
+
+ }
+)
+
+
+test_that("data are not unintentionally modified by reference when imputed",
+          code = {expect_identical(pbc_temp, pbc_temp_orig)})
 
 #' @srrstats {G5.9} **Noise susceptibility tests**
 #' @srrstats {G5.9a} *Adding trivial noise to data does not meaningfully change results*
@@ -518,14 +601,14 @@ test_that(
    0.1
   )
 
-  expect_equal(fit_orsf$forest[[1]]$leaf_nodes,
-               fit_orsf_2$forest[[1]]$leaf_nodes)
-
-  expect_equal(fit_orsf$forest[[1]]$leaf_nodes,
-               fit_orsf_scale$forest[[1]]$leaf_nodes)
-
-  expect_equal(fit_orsf$forest[[1]]$leaf_nodes,
-               fit_orsf_noise$forest[[1]]$leaf_nodes)
+  for(i in 1:10){
+   expect_equal(fit_orsf$forest[[i]]$leaf_nodes,
+                fit_orsf_2$forest[[i]]$leaf_nodes)
+   expect_equal(fit_orsf$forest[[i]]$leaf_nodes,
+                fit_orsf_scale$forest[[i]]$leaf_nodes)
+   expect_equal(fit_orsf$forest[[i]]$leaf_nodes,
+                fit_orsf_noise$forest[[i]]$leaf_nodes)
+  }
 
  }
 )
@@ -535,9 +618,7 @@ test_that(
 
 
 object <- orsf(pbc_orsf, Surv(time, status) ~ . - id, no_fit = TRUE)
-
 set.seed(329)
-
 fit_orsf_3 <- orsf_train(object)
 
 test_that(

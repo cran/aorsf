@@ -1,6 +1,6 @@
 Package: aorsf
 Title: Accelerated Oblique Random Survival Forests
-Version: 0.0.3
+Version: 0.0.4
 Authors@R: c(
     person(given = "Byron",
            family = "Jaeger",
@@ -31,7 +31,7 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.1
 LinkingTo: Rcpp, RcppArmadillo
-Imports: Rcpp, data.table, utils, stats
+Imports: Rcpp, data.table, utils, stats, collapse
 URL: https://github.com/ropensci/aorsf,
         https://docs.ropensci.org/aorsf/
 BugReports: https://github.com/ropensci/aorsf/issues/
@@ -41,7 +41,7 @@ Suggests: survival, SurvMetrics, ggplot2, testthat (>= 3.0.0), knitr,
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2022-10-09 15:26:10 UTC; bjaeger
+Packaged: 2022-11-07 03:15:04 UTC; bjaeger
 Author: Byron Jaeger [aut, cre] (<https://orcid.org/0000-0001-7399-2299>),
   Nicholas Pajewski [ctb],
   Sawyer Welden [ctb],
@@ -50,4 +50,4 @@ Author: Byron Jaeger [aut, cre] (<https://orcid.org/0000-0001-7399-2299>),
   Lukas Burk [rev]
 Maintainer: Byron Jaeger <bjaeger@wakehealth.edu>
 Repository: CRAN
-Date/Publication: 2022-10-09 16:00:02 UTC
+Date/Publication: 2022-11-07 08:00:02 UTC

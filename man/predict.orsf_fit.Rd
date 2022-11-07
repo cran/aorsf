@@ -39,8 +39,11 @@ options are
 \item{na_action}{(\emph{character}) what should happen when \code{new_data} contains missing values (i.e., \code{NA} values). Valid options are:
 \itemize{
 \item 'fail' : an error is thrown if \code{new_data} contains \code{NA} values
-\item 'pass' : the output will have \code{NA} in all rows where \code{new_data} has 1 or more \code{NA} value for the predictors used by \code{object}.
+\item 'pass' : the output will have \code{NA} in all rows where \code{new_data} has 1 or more \code{NA} value for the predictors used by \code{object}
 \item 'omit' : rows in \code{new_data} with incomplete data will be dropped
+\item 'impute_meanmode' : missing values for continuous and categorical variables in \code{new_data} will be imputed using the mean and mode, respectively. To clarify,
+the mean and mode used to impute missing values are from the
+training data of \code{object}, not from \code{new_data}.
 }}
 
 \item{boundary_checks}{(\emph{logical}) if \code{TRUE}, \code{pred_horizon} will be
@@ -56,8 +59,7 @@ to value \code{j} in \code{pred_horizon}. Row \code{i} of the matrix corresponds
 row \code{i} in \code{new_data}.
 }
 \description{
-Predicted risk or survival (someday also hazard or mortality)
-from an ORSF model.
+Predicted risk, survival, hazard, or mortality from an ORSF model.
 }
 \details{
 \code{new_data} must have the same columns with equivalent types as the data
@@ -106,7 +108,7 @@ predict(fit,
 ## [2,] 0.035699097 0.07776627 0.14863153
 ## [3,] 0.110355739 0.26854128 0.40820574
 ## [4,] 0.011659607 0.02787088 0.07267587
-## [5,] 0.006644573 0.01591640 0.04903247
+## [5,] 0.006580104 0.01585194 0.04896800
 }\if{html}{\out{</div>}}
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# predicted survival, i.e., 1 - risk
@@ -121,7 +123,7 @@ predict(fit,
 ## [2,] 0.9643009 0.9222337 0.85136847
 ## [3,] 0.8896443 0.7314587 0.59179426
 ## [4,] 0.9883404 0.9721291 0.92732413
-## [5,] 0.9933554 0.9840836 0.95096753
+## [5,] 0.9934199 0.9841481 0.95103200
 }\if{html}{\out{</div>}}
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# predicted cumulative hazard function
@@ -137,7 +139,7 @@ predict(fit,
 ## [2,] 0.037859536 0.09860152 0.20087409
 ## [3,] 0.131539617 0.38704960 0.68840843
 ## [4,] 0.011659607 0.02870233 0.08408614
-## [5,] 0.006644573 0.01789893 0.05801293
+## [5,] 0.006580104 0.01783446 0.05794846
 }\if{html}{\out{</div>}}
 
 Predict mortality, defined as the number of events in the forest’s
@@ -155,7 +157,7 @@ prediction horizon
 ## [2,] 10.811443
 ## [3,] 27.509084
 ## [4,]  5.930542
-## [5,]  3.891028
+## [5,]  3.881523
 }\if{html}{\out{</div>}}
 }
 

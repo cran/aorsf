@@ -162,7 +162,8 @@ ice_oob
 
 ## -----------------------------------------------------------------------------
 
-ice_oob[, pred := pred - pred[bili==1], by = id_row]
+ice_oob[, pred_subtract := rep(pred[id_variable==1], times=25)]
+ice_oob[, pred := pred - pred_subtract]
 
 
 ## ---- -orsf_ice---------------------------------------------------------------
