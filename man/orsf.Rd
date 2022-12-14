@@ -24,6 +24,7 @@ orsf(
   oobag_eval_every = n_tree,
   oobag_fun = NULL,
   importance = "anova",
+  group_factors = TRUE,
   tree_seeds = NULL,
   attach_data = TRUE,
   no_fit = FALSE,
@@ -142,6 +143,9 @@ For more details, see the out-of-bag \href{https://docs.ropensci.org/aorsf/artic
 
 For details on these methods, see \link{orsf_vi}.}
 
+\item{group_factors}{(\emph{logical}) Only relevant if variable importance is
+being estimated. if \code{TRUE}, the importance of factor variables will be reported overall by aggregating the importance of individual levels of the factor. If \code{FALSE}, the importance of individual factor levels will be returned.}
+
 \item{tree_seeds}{(\emph{integer vector}) Optional. if specified, random seeds
 will be set using the values in \code{tree_seeds[i]}  before growing tree \code{i}.
 Two forests grown with the same number of trees and the same seeds will
@@ -211,6 +215,10 @@ writing \code{status + time ~ .} will make \code{orsf} assume your
 \item The response variable can be a survival object stored in \code{data}.
 For example, y ~ . is a valid formula if \code{data$y} inherits
 from the \code{Surv} class.
+\item Although you can fit an oblique random survival forest with 1 predictor
+variable, your formula should have at least 2 predictors. The reason for
+this recommendation is that a linear combination of predictors is trivial
+if there is only one predictor.
 }
 
 \strong{mtry}:
@@ -462,8 +470,8 @@ And the indices of prediction accuracy:
 
 From inspection,
 \itemize{
-\item the PCA approach has the highest discrimination, showing that you
-can do very well with just a two line custom function.
+\item the PCA approach has the highest discrimination, showing that you can
+do very well with just a two line custom function.
 \item the accelerated ORSF has the highest index of prediction accuracy
 \item the random coefficients generally don’t do that well.
 }
@@ -824,8 +832,8 @@ From inspection,
 \itemize{
 \item \code{aorsf} appears to have a higher expected value for ‘surv.cindex’
 (higher is better)
-\item \code{aorsf} appears to have a lower expected value for ‘surv.graf’
-(lower is better)
+\item \code{aorsf} appears to have a lower expected value for ‘surv.graf’ (lower
+is better)
 \item \code{aorsf} has the lowest training time.
 }
 

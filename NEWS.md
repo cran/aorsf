@@ -1,4 +1,19 @@
+# aorsf 0.0.5
+
+* `orsf()` no longer throws errors or warnings when you try to give it a single predictor. A note was added to the documentation in the details of `?orsf` that explains why using a single predictor with `orsf()` is somewhat useless. This was done to resolve https://github.com/mlr-org/mlr3extralearners/issues/259.
+
+* `predict.orsf_fit` now accepts `pred_horizon = 0` and returns sensible values. Thanks to @mattwarkentin for the feature request.
+
+* added a function to perform variable selection, `orsf_vs()`.
+
+* Made variable importance consistent with respect to `group_factors`. Originally, the output from `orsf` would have ungrouped VI values while `orsf_vi` would have grouped values. With this update, `orsf` defaults to grouped values. The ungrouped values can still be recovered.
+
+* Fixed an issue in `orsf_pd` functions where output data were not being returned on the original scale.
+
+
 # aorsf 0.0.4
+
+* `orsf` formulas now accepts `Surv` objects (see https://github.com/ropensci/aorsf/issues/11)
 
 * Added `verbose_progress` input to `orsf`, which prints messages to console indicating progress. 
 

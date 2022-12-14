@@ -1,4 +1,6 @@
 
+library(survival) # for Surv
+
 # misc functions used for tests ----
 
 cstat_bcj <- function(y_mat, s_vec){
@@ -40,7 +42,8 @@ pbc_temp$status <- pbc_temp$status+1
 
 
 f1 <- Surv(time, status) ~ unknown_variable + bili
-f2 <- Surv(time, status) ~ id
+# dropped test - see https://github.com/mlr-org/mlr3extralearners/issues/259
+# f2 <- Surv(time, status) ~ bili
 f3 <- Surv(time, status) ~ bili + factor(hepato)
 f4 <- Surv(time, status) ~ bili * ascites
 f5 <- Surv(time, status) ~ bili + id
@@ -53,6 +56,7 @@ f11 <- Surv(time, id) ~ . -id
 f12 <- Surv(time, status) ~ . -id
 f13 <- ~ .
 f14 <- status + time ~ . - id
+f15 <- time + status ~ id + bili
 
 #' @srrstats {G5.2} *Appropriate error behaviour is explicitly demonstrated through tests.*
 #' @srrstats {G5.2b} *Tests demonstrate conditions which trigger error messages.*
@@ -61,7 +65,8 @@ test_that(
  code = {
 
   expect_error(orsf(pbc_temp, f1), 'not found in data')
-  expect_error(orsf(pbc_temp, f2), 'at least 2 predictors')
+  # # dropped - see https://github.com/mlr-org/mlr3extralearners/issues/259
+  # expect_warning(orsf(pbc_temp, f2), 'at least 2 predictors')
   expect_error(orsf(pbc_temp, f3), 'unrecognized')
   expect_error(orsf(pbc_temp, f4), 'unrecognized')
   expect_error(orsf(pbc_temp, f5), 'id variable?')
@@ -73,6 +78,7 @@ test_that(
   expect_error(orsf(pbc_temp, f11), 'detected >1 event type')
   expect_error(orsf(pbc_temp, f13), 'must be two sided')
   expect_error(orsf(pbc_temp, f14), 'Did you enter')
+  expect_error(orsf(pbc_temp, f15), "as many levels as there are rows")
 
  }
 )
