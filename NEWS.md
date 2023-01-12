@@ -1,3 +1,7 @@
+# aorsf 0.0.7
+
+* Additional changes in internal testing to avoid problems with ATLAS
+
 # aorsf 0.0.6
 
 * Minor fix for internal tests that were failing when run on ATLAS

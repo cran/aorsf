@@ -1,7 +1,7 @@
-91933e8a93ebd30ba365ee605a01a146 *DESCRIPTION
+1f8e480d0fae8f0f9c87f90e76dfbf4a *DESCRIPTION
 a3c74e12fa9df07e838b52c584bbb840 *LICENSE
 cfff901642c946fb4a0e7fd77d674b24 *NAMESPACE
-a2f2dc78029cdc89cfc50ca96fe19bfc *NEWS.md
+8177255682e24b5cc2fc7c2fbf015c99 *NEWS.md
 03ba8ea20b03ea23b0c3c8bb89f6d070 *R/RcppExports.R
 7a31130eb3f05fd04149c8789075b9ea *R/aorsf-package.R
 36273e4b2e47ce2b010e14d545213c87 *R/check.R
@@ -37,7 +37,7 @@ a9dd3144915134e58610680f6cd99cbb *data/pbc_orsf.rda
 e1c876df79b098f5db65e6308abdb62f *inst/CITATION
 a57138013fed9290737721cec90b4a6d *inst/doc/aorsf.R
 279e2dc344deea5184099635eee74902 *inst/doc/aorsf.Rmd
-631982289bc915d7c8a8fad47a159d41 *inst/doc/aorsf.html
+08330596b268efcf2b80435807d97be4 *inst/doc/aorsf.html
 781089ef88ed15f7144187c2887e17f4 *inst/doc/oobag.R
 c36695a2bee63ccaf4dd0d9a39b36c41 *inst/doc/oobag.Rmd
 c6077abe3d1ebfe30042497b19816584 *inst/doc/oobag.html
@@ -82,7 +82,7 @@ f3e5782781648f026558c38bc2645005 *tests/testthat/test-orsf.R
 ef44e2b1fe0e0b667c6c7ea496838e40 *tests/testthat/test-orsf_control.R
 df4d2e027c5b62d14817fbf466e05d6a *tests/testthat/test-orsf_interaction.R
 62c9979fa02b13f59c7731b1de6852ad *tests/testthat/test-orsf_pd.R
-00021b8e71fbddaec0179878d40195de *tests/testthat/test-orsf_predict.R
+ffe7218d1eaa32b036ed7feb692de4d3 *tests/testthat/test-orsf_predict.R
 e9007f7945da0b246595fabcf54191ea *tests/testthat/test-orsf_print.R
 8956b6e4f7f90208ebdb7e83372a27e2 *tests/testthat/test-orsf_scale_x.R
 94ea4eef900f3f91274c422b0d968894 *tests/testthat/test-orsf_summary.R
