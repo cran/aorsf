@@ -2,13 +2,13 @@ citHeader("To cite aorsf in publications use:")
 
 
 
-citEntry(
-  entry    = "Article",
+bibentry(
+  bibtype  = "Article",
   title    = "aorsf: An R package for supervised learning using the oblique random survival forest",
-  author   = personList(as.person("Byron C. Jaeger"),
-                        as.person("Sawyer Welden"),
-                        as.person("Kristin Lenoir"),
-                        as.person("Nicholas M. Pajewski")),
+  author   = c(as.person("Byron C. Jaeger"),
+               as.person("Sawyer Welden"),
+               as.person("Kristin Lenoir"),
+               as.person("Nicholas M. Pajewski")),
   journal  = "Journal of Open Source Software",
   year     = "2022",
   volume   = "7",
@@ -22,30 +22,30 @@ citEntry(
   )
 )
 
-citEntry(
-  entry    = "Article",
+bibentry(
+  bibtype  =  "Article",
   title    = "Accelerated and interpretable oblique random survival forests",
-  author   = personList(as.person("Byron C. Jaeger"),
-                        as.person("Sawyer Welden"),
-                        as.person("Kristin Lenoir"),
-                        as.person("Jaime L. Speiser"),
-                        as.person("Matthew W. Segar"),
-                        as.person("Ambarish Pandey"),
-                        as.person("Nicholas M. Pajewski")),
-  journal  = "arXiv",
-  year     = "2022",
-  url      = "https://arxiv.org/abs/2208.01129",
+  author   = c(as.person("Byron C. Jaeger"),
+               as.person("Sawyer Welden"),
+               as.person("Kristin Lenoir"),
+               as.person("Jaime L. Speiser"),
+               as.person("Matthew W. Segar"),
+               as.person("Ambarish Pandey"),
+               as.person("Nicholas M. Pajewski")),
+  journal  = "Journal of Computational and Graphical Statistics",
+  year     = "2023",
+  url      = "https://doi.org/10.1080/10618600.2023.2231048",
   textVersion = paste(
    "Jaeger BC, Welden S, Lenoir K, Speiser JL, Segar MW, Pandey A, Pajewski NM.",
    "Accelerated and interpretable oblique random survival forests.",
-   "arXiv e-prints.",
-   "2022 Aug 3:arXiv-2208."
+   "Journal of Computational and Graphical Statistics. 2023 Aug 3:1-6."
   )
 )
 
-citEntry(entry = "Article",
+bibentry(
+  bibtype      = "Article",
   title        = "Oblique Random Survival Forests",
-  author       = personList(
+  author       = c(
                    as.person("Byron C. Jaeger"),
                    as.person("D. Leann Long"),
                    as.person("Dustin M. Long"),

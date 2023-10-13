@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -18,7 +18,7 @@ library(SurvMetrics)
 fit <- orsf(data = pbc_orsf, 
             formula = Surv(time, status) ~ . - id,
             oobag_pred_type = 'surv',
-            oobag_pred_horizon = 3500)
+            oobag_pred_horizon = 2000)
 
 hist(fit$pred_oobag, 
      main = 'Ensemble out-of-bag survival predictions at t=3,500')
@@ -38,7 +38,8 @@ fit$eval_oobag$stat_values
 fit <- orsf(data = pbc_orsf,
             formula = Surv(time, status) ~ . - id,
             n_tree = 50,
-            oobag_pred_horizon = 3500,
+            oobag_pred_type = 'surv',
+            oobag_pred_horizon = 2000,
             oobag_eval_every = 1)
 
 plot(
@@ -52,7 +53,7 @@ plot(
 
 ## -----------------------------------------------------------------------------
 
-oobag_fun_brier <- function(y_mat, s_vec){
+oobag_fun_brier <- function(y_mat, w_vec, s_vec){
 
  # output is numeric vector of length 1
  as.numeric(
@@ -60,7 +61,7 @@ oobag_fun_brier <- function(y_mat, s_vec){
    object = Surv(time = y_mat[, 1], event = y_mat[, 2]), 
    pre_sp = s_vec,
    # t_star in Brier() should match oob_pred_horizon in orsf()
-   t_star = 3500
+   t_star = 2000
   )
  )
  
@@ -68,7 +69,7 @@ oobag_fun_brier <- function(y_mat, s_vec){
 
 ## -----------------------------------------------------------------------------
 
-oobag_fun_brier(y_mat = fit$data[, c('time', 'status')],
+oobag_fun_brier(y_mat = pbc_orsf[,c('time', 'status')],
                 s_vec = fit$pred_oobag)
 
 
@@ -77,7 +78,7 @@ oobag_fun_brier(y_mat = fit$data[, c('time', 'status')],
 fit <- orsf(data = pbc_orsf,
             formula = Surv(time, status) ~ . - id,
             n_tree = 50,
-            oobag_pred_horizon = 3500,
+            oobag_pred_horizon = 2000,
             oobag_fun = oobag_fun_brier,
             oobag_eval_every = 1)
 
@@ -93,13 +94,13 @@ plot(
 
 ## -----------------------------------------------------------------------------
 
-oobag_fun_tdep_cstat <- function(y_mat, s_vec){
+oobag_fun_tdep_cstat <- function(y_mat, w_vec, s_vec){
 
  as.numeric(
   SurvMetrics::Cindex(
    object = Surv(time = y_mat[, 1], event = y_mat[, 2]), 
    predicted = s_vec,
-   t_star = 3500
+   t_star = 2000
   )
  )
 
@@ -108,7 +109,7 @@ oobag_fun_tdep_cstat <- function(y_mat, s_vec){
 fit <- orsf(data = pbc_orsf,
             formula = Surv(time, status) ~ . - id,
             n_tree = 50,
-            oobag_pred_horizon = 3500,
+            oobag_pred_horizon = 2000,
             oobag_fun = oobag_fun_tdep_cstat,
             oobag_eval_every = 1)
 
@@ -117,7 +118,7 @@ plot(
  y = fit$eval_oobag$stat_values, 
  main = 'Out-of-bag time-dependent AUC\ncomputed after each new tree is grown.',
  xlab = 'Number of trees grown',
- ylab = "AUC at t = 3,500"
+ ylab = "AUC at t = 2,000"
 )
 
 
@@ -135,9 +136,11 @@ y_mat <- cbind(time = test_time, status = test_status)
 s_vec <- seq(0.9, 0.1, length.out = 100)
 
 # see 1 in the checklist above
-names(formals(oobag_fun_tdep_cstat)) == c("y_mat", "s_vec")
+names(formals(oobag_fun_tdep_cstat)) == c("y_mat", "w_vec", "s_vec")
 
-test_output <- oobag_fun_tdep_cstat(y_mat = y_mat, s_vec = s_vec)
+test_output <- oobag_fun_tdep_cstat(y_mat = y_mat, 
+                                    w_vec = w_vec,
+                                    s_vec = s_vec)
 
 # test output should be numeric
 is.numeric(test_output)
@@ -146,13 +149,18 @@ length(test_output) == 1
 
 
 ## -----------------------------------------------------------------------------
+oobag_fun_tdep_cstat_inverse <- function(y_mat, w_vec, s_vec){
+ 1 - oobag_fun_tdep_cstat(y_mat, w_vec, s_vec)
+}
+
+## -----------------------------------------------------------------------------
 
 fit_tdep_cstat <- orsf(data = pbc_orsf,
-                 formula = Surv(time, status) ~ . - id,
-                 n_tree = 500,
-                 oobag_pred_horizon = 3500,
-                 oobag_fun = oobag_fun_tdep_cstat,
-                 importance = 'negate')
+                       formula = Surv(time, status) ~ . - id,
+                       n_tree = 100,
+                       oobag_pred_horizon = 2000,
+                       oobag_fun = oobag_fun_tdep_cstat_inverse,
+                       importance = 'negate')
 
 fit_tdep_cstat$importance
 

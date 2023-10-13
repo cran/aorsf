@@ -15,6 +15,7 @@ orsf_pd_oob(
   prob_values = c(0.025, 0.5, 0.975),
   prob_labels = c("lwr", "medn", "upr"),
   boundary_checks = TRUE,
+  n_thread = 1,
   ...
 )
 
@@ -27,6 +28,7 @@ orsf_pd_inb(
   prob_values = c(0.025, 0.5, 0.975),
   prob_labels = c("lwr", "medn", "upr"),
   boundary_checks = TRUE,
+  n_thread = 1,
   ...
 )
 
@@ -41,6 +43,7 @@ orsf_pd_new(
   prob_values = c(0.025, 0.5, 0.975),
   prob_labels = c("lwr", "medn", "upr"),
   boundary_checks = TRUE,
+  n_thread = 1,
   ...
 )
 }
@@ -97,6 +100,8 @@ value in \code{prob_values} should be labelled as in summarized outputs.
 to make sure the requested values are between the 10th and 90th
 percentile in the object's training data. If \code{FALSE}, these checks are
 skipped.}
+
+\item{n_thread}{(\emph{integer}) number of threads to use while computing predictions. Default is one thread. To use the maximum number of threads that your system provides for concurrent execution, set \code{n_thread = 0}.}
 
 \item{...}{Further arguments passed to or from other methods (not currently used).}
 
@@ -155,12 +160,12 @@ You can compute partial dependence and ICE three ways with \code{aorsf}:
 pd_train
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##    pred_horizon bili      mean        lwr      medn       upr
-## 1:      1826.25    1 0.2054232 0.01599366 0.0929227 0.8077278
-## 2:      1826.25    2 0.2369077 0.02549869 0.1268457 0.8227315
-## 3:      1826.25    3 0.2808514 0.05027265 0.1720280 0.8457834
-## 4:      1826.25    4 0.3428065 0.09758988 0.2545869 0.8575243
-## 5:      1826.25    5 0.3992909 0.16392752 0.3232681 0.8634269
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##    pred_horizon bili      mean        lwr       medn       upr
+## 1:      1826.25    1 0.2188047 0.01435497 0.09604722 0.8243506
+## 2:      1826.25    2 0.2540831 0.03086042 0.13766124 0.8442959
+## 3:      1826.25    3 0.2982917 0.05324065 0.19470910 0.8578131
+## 4:      1826.25    4 0.3536969 0.09755193 0.27774884 0.8699063
+## 5:      1826.25    5 0.3955249 0.14622431 0.29945708 0.8775099
 }\if{html}{\out{</div>}}
 \item using out-of-bag predictions for the training data
 
@@ -169,12 +174,12 @@ pd_train
 pd_train
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##    pred_horizon bili      mean        lwr       medn       upr
-## 1:      1826.25    1 0.2068300 0.01479443 0.08824123 0.8053317
-## 2:      1826.25    2 0.2377046 0.02469718 0.12623031 0.8258154
-## 3:      1826.25    3 0.2810546 0.04080813 0.18721220 0.8484846
-## 4:      1826.25    4 0.3417839 0.09076851 0.24968438 0.8611884
-## 5:      1826.25    5 0.3979925 0.16098228 0.32147532 0.8554402
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##    pred_horizon bili      mean        lwr      medn       upr
+## 1:      1826.25    1 0.2182691 0.01218789 0.1008030 0.8304537
+## 2:      1826.25    2 0.2542021 0.02447359 0.1453580 0.8484741
+## 3:      1826.25    3 0.2980946 0.04854875 0.1997769 0.8640601
+## 4:      1826.25    4 0.3552203 0.10116417 0.2691853 0.8642393
+## 5:      1826.25    5 0.3959143 0.14768055 0.3264149 0.8737186
 }\if{html}{\out{</div>}}
 \item using predictions for a new set of data
 
@@ -186,11 +191,11 @@ pd_test
 }\if{html}{\out{</div>}}
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{##    pred_horizon bili      mean        lwr      medn       upr
-## 1:      1826.25    1 0.2510900 0.01631318 0.1872414 0.8162621
-## 2:      1826.25    2 0.2807327 0.02903956 0.2269297 0.8332956
-## 3:      1826.25    3 0.3247386 0.05860235 0.2841853 0.8481825
-## 4:      1826.25    4 0.3850799 0.10741224 0.3405760 0.8588955
-## 5:      1826.25    5 0.4394952 0.17572657 0.4050864 0.8657886
+## 1:      1826.25    1 0.2643662 0.01758300 0.2098936 0.8410357
+## 2:      1826.25    2 0.2990578 0.04063388 0.2516202 0.8553218
+## 3:      1826.25    3 0.3432503 0.06843859 0.3056799 0.8670726
+## 4:      1826.25    4 0.3968111 0.11801725 0.3593064 0.8725208
+## 5:      1826.25    5 0.4388962 0.16038177 0.4094224 0.8809027
 }\if{html}{\out{</div>}}
 \item in-bag partial dependence indicates relationships that the model has
 learned during training. This is helpful if your goal is to interpret

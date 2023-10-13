@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>", 
@@ -120,8 +120,8 @@ head(as.data.table(pd_smry))
 ## -----------------------------------------------------------------------------
 
 pred_spec = list(bili = seq(1, 5, length.out = 20),
-               edema = levels(pbc_orsf_train$edema),
-               trt = levels(pbc_orsf$trt))
+                 edema = levels(pbc_orsf_train$edema),
+                 trt = levels(pbc_orsf$trt))
 
 pd_bili_edema <- orsf_pd_oob(fit, pred_spec)
 
@@ -144,7 +144,7 @@ fit_cph <- coxph(Surv(time,status) ~ edema_05 * bili,
 anova(fit_cph)
 
 
-## ---- echo = FALSE------------------------------------------------------------
+## ----echo = FALSE-------------------------------------------------------------
 
 # in case pbc_orsf is used in downstream docs
 
@@ -166,7 +166,7 @@ ice_oob[, pred_subtract := rep(pred[id_variable==1], times=25)]
 ice_oob[, pred := pred - pred_subtract]
 
 
-## ---- -orsf_ice---------------------------------------------------------------
+## -----orsf_ice----------------------------------------------------------------
 
 library(ggplot2)
 

@@ -1,3 +1,19 @@
+# aorsf 0.1.0 (unreleased)
+
+* Re-worked internal C++ routines following the design of `ranger`. 
+
+* Re-worked how progress is printed to console when `verbose_progress` is `TRUE`, following the design of `ranger`. Messages now indicate the action being taken, the % complete, and the approximate time until finishing the action. 
+
+* Improved variable importance, following the design of `ranger`. Importance is now computed tree-by-tree instead of by aggregate. Additionally, mortality is the type of prediction used for importance with survival trees, since mortality does not depend on `pred_horizon`.
+
+* Allowed multi-threading to be performed in `orsf()`, `predict.orsf_fit()`, and functions in the `orsf_vi()` and `orsf_pd()` family.
+
+* Allowed sampling without replacement and sampling a specific fraction of observations in `orsf()`
+
+* Included Harrell's C-statistic as an option for assessing goodness of splits while growing trees.
+
+* Fixed an issue where an uninformative error message would occur when `pred_horizon` was > max(time) for `orsf_summarize_uni`. Thanks to @JyHao1 and @DustinMLong for finding this!
+
 # aorsf 0.0.7
 
 * Additional changes in internal testing to avoid problems with ATLAS
