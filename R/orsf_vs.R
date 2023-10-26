@@ -24,10 +24,9 @@
 #' object <- orsf(formula = time + status ~ .,
 #'                data = pbc_orsf,
 #'                n_tree = 25,
-#'                importance = 'anova',
-#'                tree_seeds = 1:25)
+#'                importance = 'anova')
 #'
-#' orsf_vs(object)
+#' orsf_vs(object, n_predictor_min = 17)
 
 orsf_vs <- function(object,
                     n_predictor_min = 3,
@@ -63,6 +62,8 @@ orsf_vs <- function(object,
   predictor_dropped = rep(NA_character_, n_predictors)
  )
 
+ control <- get_control(object)
+
  cols_kept <- c(forest_outcomes, forest_predictors)
 
  while(n_predictors > n_predictor_min){
@@ -71,7 +72,7 @@ orsf_vs <- function(object,
 
   forest_object <- orsf(data = forest_data,
                         formula = formula,
-                        control = get_control(object),
+                        control = control,
                         weights = forest_weights,
                         n_tree = get_n_tree(object),
                         n_split = get_n_split(object),
@@ -91,6 +92,15 @@ orsf_vs <- function(object,
                         attach_data = FALSE,
                         na_action = get_na_action(object),
                         verbose_progress = get_verbose_progress(object))
+
+  if(!is.null(control$lincomb_df_target)){
+   # once mtry is < df_target, set df_target to NULL
+   # this means df_target is < mtry until mtry is the same,
+   # and from there df_target will be the same as mtry.
+   if(control$lincomb_df_target >= get_mtry(forest_object)){
+    control$lincomb_df_target <- NULL
+   }
+  }
 
   forest_predictors <- get_names_x(forest_object)
   n_predictors <- length(forest_predictors)

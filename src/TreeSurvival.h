@@ -23,6 +23,8 @@
   TreeSurvival(const TreeSurvival&) = delete;
   TreeSurvival& operator=(const TreeSurvival&) = delete;
 
+  virtual ~TreeSurvival() override = default;
+
   TreeSurvival(double leaf_min_events,
                double split_min_events,
                arma::vec* unique_event_times,
@@ -56,8 +58,8 @@
 
   void sprout_leaf(uword node_id) override;
 
-  void predict_value(arma::mat* pred_output,
-                     arma::vec* pred_denom,
+  void predict_value(arma::mat& pred_output,
+                     arma::vec& pred_denom,
                      PredType pred_type,
                      bool oobag) override;
 

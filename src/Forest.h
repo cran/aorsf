@@ -58,11 +58,15 @@ public:
            double lincomb_alpha,
            arma::uword lincomb_df_target,
            arma::uword lincomb_ties_method,
-           RObject lincomb_R_function,
+           Rcpp::RObject lincomb_R_function,
            // predictions
            PredType pred_type,
            bool pred_mode,
            bool pred_aggregate,
+           PartialDepType pd_type,
+           std::vector<arma::mat>& pd_x_vals,
+           std::vector<arma::uvec>& pd_x_cols,
+           arma::vec& pd_probs,
            bool oobag_pred,
            EvalType oobag_eval_type,
            arma::uword oobag_eval_every,
@@ -224,8 +228,8 @@ protected:
  void predict_multi_thread(uint thread_idx,
                            Data* prediction_data,
                            bool oobag,
-                           mat* result_ptr,
-                           vec* denom_ptr);
+                           mat& result_ptr,
+                           vec& denom_ptr);
 
  void compute_oobag_vi();
 
@@ -284,7 +288,7 @@ protected:
  arma::uword lincomb_iter_max;
  arma::uword lincomb_df_target;
  arma::uword lincomb_ties_method;
- RObject     lincomb_R_function;
+ Rcpp::RObject     lincomb_R_function;
 
  bool grow_mode;
 
@@ -307,7 +311,7 @@ protected:
  arma::mat   oobag_eval;
  EvalType    oobag_eval_type;
  arma::uword oobag_eval_every;
- RObject     oobag_R_function;
+ Rcpp::RObject     oobag_R_function;
 
 
  // multi-threading

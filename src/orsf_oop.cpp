@@ -6,7 +6,6 @@
 
  Authors:
  - Byron C. Jaeger (http://byronjaeger.com)
- - test
 #----------------------------------------------------------------------------*/
 
 #include <RcppArmadillo.h>
@@ -33,8 +32,8 @@
                          arma::mat& y_node,
                          arma::vec& w_node,
                          int method,
-                         double cph_eps,
-                         arma::uword cph_iter_max){
+                         double epsilon,
+                         arma::uword iter_max){
 
   arma::uvec cols_node=regspace<uvec>(0, x_node.n_cols-1);
 
@@ -43,15 +42,39 @@
                             w_node,
                             true,
                             method,
-                            cph_eps,
-                            cph_iter_max);
+                            epsilon,
+                            iter_max);
 
   List result;
   result.push_back(out.col(0), "beta");
-  result.push_back(out.col(1), "var");
+  result.push_back(out.col(1), "pvalues");
 
   return(result);
 
+ }
+
+ // [[Rcpp::export]]
+ arma::mat linreg_fit_exported(arma::mat& x_node,
+                               arma::mat& y_node,
+                               arma::vec& w_node,
+                               bool do_scale,
+                               double epsilon,
+                               arma::uword iter_max){
+  return(
+   linreg_fit(x_node, y_node, w_node, do_scale, epsilon, iter_max)
+  );
+ }
+
+ // [[Rcpp::export]]
+ arma::mat logreg_fit_exported(arma::mat& x_node,
+                               arma::mat& y_node,
+                               arma::vec& w_node,
+                               bool do_scale,
+                               double epsilon,
+                               arma::uword iter_max){
+  return(
+   logreg_fit(x_node, y_node, w_node, do_scale, epsilon, iter_max)
+  );
  }
 
  // [[Rcpp::export]]
@@ -154,6 +177,8 @@
   result.push_back(tree.get_leaf_pred_chaz(), "chaz");
   result.push_back(tree.get_leaf_summary(),   "mort");
 
+  delete tree.unique_event_times;
+
   return(result);
 
  }
@@ -168,6 +193,36 @@
   tree.find_rows_inbag(n_obs);
 
   return(tree.get_rows_inbag());
+
+ }
+
+ // [[Rcpp::export]]
+ arma::vec x_submat_mult_beta_exported(arma::mat& x,
+                                       arma::mat& y,
+                                       arma::vec& w,
+                                       arma::uvec& x_rows,
+                                       arma::uvec& x_cols,
+                                       arma::vec& beta){
+
+  std::unique_ptr<Data> data = std::make_unique<Data>(x, y, w);
+
+  vec out = data->x_submat_mult_beta(x_rows, x_cols, beta);
+
+  return(out);
+
+ }
+
+ // [[Rcpp::export]]
+ List scale_x_exported(arma::mat& x,
+                       arma::vec& w){
+
+  mat transforms = scale_x(x, w);
+
+  List result;
+  result.push_back(x, "scaled_x");
+  result.push_back(transforms, "transforms");
+
+  return(result);
 
  }
 
@@ -268,6 +323,15 @@
   // re-cast integer inputs from R into enumerations
   // see globals.h for definitions.
   TreeType tree_type = (TreeType) tree_type_R;
+
+  if(tree_type == TREE_CLASSIFICATION ||
+     tree_type == TREE_PROBABILITY ||
+     tree_type == TREE_REGRESSION){
+
+   stop("that tree type is not ready yet");
+
+  }
+
   VariableImportance vi_type = (VariableImportance) vi_type_R;
   SplitRule split_rule = (SplitRule) split_rule_R;
   LinearCombo lincomb_type = (LinearCombo) lincomb_type_R;
@@ -335,6 +399,10 @@
                pred_type,
                pred_mode,
                pred_aggregate,
+               pd_type,
+               pd_x_vals,
+               pd_x_cols,
+               pd_probs,
                oobag,
                oobag_eval_type,
                oobag_eval_every,

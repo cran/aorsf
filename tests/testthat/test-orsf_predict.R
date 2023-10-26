@@ -151,35 +151,35 @@ test_that(
  }
 )
 
-test_that(
- desc = "leaf predictions aggregate same as raw",
- code = {
-  expect_equal(pred_objects_surv$leaf$prd_raw,
-               pred_objects_surv$leaf$prd_agg)
- }
-)
+# test_that(
+#  desc = "leaf predictions aggregate same as raw",
+#  code = {
+#   expect_equal(pred_objects_surv$leaf$prd_raw,
+#                pred_objects_surv$leaf$prd_agg)
+#  }
+# )
 
-test_that(
- desc = "unaggregated predictions can reproduce aggregated ones",
- code = {
-
-  for(i in c("surv", "risk", "chf")){
-   for(j in seq_along(pred_horizon)){
-    expect_equal(
-     pred_objects_surv[[i]]$prd_agg[, j],
-     apply(pred_objects_surv[[i]]$prd_raw[, , j], 1, mean),
-     tolerance = 1e-9
-    )
-   }
-  }
-
-  expect_equal(
-   pred_objects_surv$mort$prd_agg,
-   matrix(apply(pred_objects_surv$mort$prd_raw, 1, mean), ncol = 1)
-  )
-
- }
-)
+# test_that(
+#  desc = "unaggregated predictions can reproduce aggregated ones",
+#  code = {
+#
+#   for(i in c("surv", "risk", "chf")){
+#    for(j in seq_along(pred_horizon)){
+#     expect_equal(
+#      pred_objects_surv[[i]]$prd_agg[, j],
+#      apply(pred_objects_surv[[i]]$prd_raw[, , j], 1, mean),
+#      tolerance = 1e-9
+#     )
+#    }
+#   }
+#
+#   expect_equal(
+#    pred_objects_surv$mort$prd_agg,
+#    matrix(apply(pred_objects_surv$mort$prd_raw, 1, mean), ncol = 1)
+#   )
+#
+#  }
+# )
 
 test_that(
  desc = "same predictions from the forest regardless of oob type",
@@ -240,7 +240,7 @@ test_that(
  }
 )
 
-new_data <- pbc_test
+new_data <- pbc_test[1:10, ]
 
 test_that(
  desc = 'pred_horizon automatically set to object$pred_horizon if needed',
@@ -557,25 +557,23 @@ test_that(
 )
 
 
-
-
-test_that(
- desc = 'missing units are detected',
- code = {
-
-  suppressMessages(library(units))
-  pbc_units <- pbc_orsf
-  units(pbc_units$age) <- 'years'
-
-  fit <- orsf(formula = time + status  ~ . - id,
-              data = pbc_units,
-              n_tree = n_tree_test)
-
-  expect_error(predict(fit, new_data = pbc_orsf, pred_horizon = 1000),
-               'unit attributes')
-
- }
-)
+# test_that(
+#  desc = 'missing units are detected',
+#  code = {
+#
+#   suppressMessages(library(units))
+#   pbc_units <- pbc_orsf
+#   units(pbc_units$age) <- 'years'
+#
+#   fit <- orsf(formula = time + status  ~ . - id,
+#               data = pbc_units,
+#               n_tree = n_tree_test)
+#
+#   expect_error(predict(fit, new_data = pbc_orsf, pred_horizon = 1000),
+#                'unit attributes')
+#
+#  }
+# )
 
 test_that(
  desc = 'predictions dont require cols in same order as training data',
@@ -596,60 +594,58 @@ test_that(
 )
 
 
-#' @srrstats {G2.11} *test to make sure testing units are consistent with training units when someone is trying to compute predictions.*
-
-test_that(
- 'units are vetted in testing data',
- code = {
-
-  suppressMessages(library(units))
-  pbc_units_trn <- pbc_train
-  pbc_units_tst <- pbc_test
-
-
-  units(pbc_units_trn$time) <- 'days'
-  units(pbc_units_trn$age) <- 'years'
-  units(pbc_units_trn$bili) <- 'mg/dl'
-
-  fit_units = orsf(formula = time + status  ~ . - id,
-                   data = pbc_units_trn,
-                   n_tree = n_tree_test,
-                   oobag_pred_horizon = c(1000, 2500),
-                   tree_seeds = seeds_standard)
-
-  expect_error(
-   predict(fit_units, new_data = pbc_units_tst, pred_horizon = 1000),
-   regexp = 'time, age, and bili'
-  )
-
-  units(pbc_units_tst$time) <- 'years'
-  units(pbc_units_tst$age) <- 'years'
-  units(pbc_units_tst$bili) <- 'mg/dl'
-
-  expect_error(
-   predict(fit_units, new_data = pbc_units_tst, pred_horizon = 1000),
-   regexp = 'time has unit d in the training data'
-  )
-
-  units(pbc_units_tst$time) <- 'days'
-  units(pbc_units_tst$age) <- 'years'
-  units(pbc_units_tst$bili) <- 'mg/dl'
-
-  expect_equal_leaf_summary(fit_units, pred_objects_surv$surv$fit)
-  expect_equal_oobag_eval(fit_units, pred_objects_surv$surv$fit)
-
-  units(pbc_units_tst$time) <- 'days'
-  units(pbc_units_tst$age) <- 'years'
-  units(pbc_units_tst$bili) <- 'mg/l'
-
-  expect_error(
-   predict(fit_units, new_data = pbc_units_tst, pred_horizon = 1000),
-   regexp = 'bili has unit mg/dl in the training data'
-  )
-
- }
-
-)
+# test_that(
+#  'units are vetted in testing data',
+#  code = {
+#
+#   suppressMessages(library(units))
+#   pbc_units_trn <- pbc_train
+#   pbc_units_tst <- pbc_test
+#
+#
+#   units(pbc_units_trn$time) <- 'days'
+#   units(pbc_units_trn$age) <- 'years'
+#   units(pbc_units_trn$bili) <- 'mg/dl'
+#
+#   fit_units = orsf(formula = time + status  ~ . - id,
+#                    data = pbc_units_trn,
+#                    n_tree = n_tree_test,
+#                    oobag_pred_horizon = c(1000, 2500),
+#                    tree_seeds = seeds_standard)
+#
+#   expect_error(
+#    predict(fit_units, new_data = pbc_units_tst, pred_horizon = 1000),
+#    regexp = 'time, age, and bili'
+#   )
+#
+#   units(pbc_units_tst$time) <- 'years'
+#   units(pbc_units_tst$age) <- 'years'
+#   units(pbc_units_tst$bili) <- 'mg/dl'
+#
+#   expect_error(
+#    predict(fit_units, new_data = pbc_units_tst, pred_horizon = 1000),
+#    regexp = 'time has unit d in the training data'
+#   )
+#
+#   units(pbc_units_tst$time) <- 'days'
+#   units(pbc_units_tst$age) <- 'years'
+#   units(pbc_units_tst$bili) <- 'mg/dl'
+#
+#   expect_equal_leaf_summary(fit_units, pred_objects_surv$surv$fit)
+#   expect_equal_oobag_eval(fit_units, pred_objects_surv$surv$fit)
+#
+#   units(pbc_units_tst$time) <- 'days'
+#   units(pbc_units_tst$age) <- 'years'
+#   units(pbc_units_tst$bili) <- 'mg/l'
+#
+#   expect_error(
+#    predict(fit_units, new_data = pbc_units_tst, pred_horizon = 1000),
+#    regexp = 'bili has unit mg/dl in the training data'
+#   )
+#
+#  }
+#
+# )
 
 # Tests for passing missing data ----
 
@@ -668,18 +664,18 @@ new_data_dt_miss <- as.data.table(new_data_miss)
 new_data_tbl_miss <- tibble::as_tibble(new_data_miss)
 
 p_cc <- predict(fit,
-                new_data = new_data[1:10, ])
+                new_data = new_data)
 
 p_ps <- predict(fit,
-                new_data = new_data_miss[1:10, ],
+                new_data = new_data_miss,
                 na_action = 'pass')
 
 p_ps_dt <- predict(fit,
-                   new_data = new_data_dt_miss[1:10, ],
+                   new_data = new_data_dt_miss,
                    na_action = 'pass')
 
 p_ps_tbl <- predict(fit,
-                    new_data = new_data_tbl_miss[1:10, ],
+                    new_data = new_data_tbl_miss,
                     na_action = 'pass')
 
 test_that(
@@ -732,21 +728,21 @@ test_that(
 pred_horiz <- c(100, 200, 300, 400, 500)
 
 p_cc <- predict(fit,
-                new_data = new_data[1:10, ],
+                new_data = new_data,
                 pred_horizon = pred_horiz)
 
 p_ps <- predict(fit,
-                new_data = new_data_miss[1:10, ],
+                new_data = new_data_miss,
                 na_action = 'pass',
                 pred_horizon = pred_horiz)
 
 p_ps_dt <- predict(fit,
-                   new_data = new_data_dt_miss[1:10, ],
+                   new_data = new_data_dt_miss,
                    na_action = 'pass',
                    pred_horizon = pred_horiz)
 
 p_ps_tbl <- predict(fit,
-                    new_data = new_data_tbl_miss[1:10, ],
+                    new_data = new_data_tbl_miss,
                     na_action = 'pass',
                     pred_horizon = pred_horiz)
 

@@ -5,7 +5,6 @@
 #include "Tree.h"
 
 using namespace arma;
-using namespace Rcpp;
 
 namespace aorsf {
 
@@ -36,11 +35,15 @@ void Forest::init(std::unique_ptr<Data> input_data,
                   double lincomb_alpha,
                   arma::uword lincomb_df_target,
                   arma::uword lincomb_ties_method,
-                  RObject lincomb_R_function,
+                  Rcpp::RObject lincomb_R_function,
                   // predictions
                   PredType pred_type,
                   bool pred_mode,
                   bool pred_aggregate,
+                  PartialDepType pd_type,
+                  std::vector<arma::mat>& pd_x_vals,
+                  std::vector<arma::uvec>& pd_x_cols,
+                  arma::vec& pd_probs,
                   bool oobag_pred,
                   EvalType oobag_eval_type,
                   arma::uword oobag_eval_every,
@@ -73,6 +76,10 @@ void Forest::init(std::unique_ptr<Data> input_data,
  this->pred_type = pred_type;
  this->pred_mode = pred_mode;
  this->pred_aggregate = pred_aggregate;
+ this->pd_type = pd_type;
+ this->pd_x_vals = pd_x_vals;
+ this->pd_x_cols = pd_x_cols;
+ this->pd_probs = pd_probs;
  this->oobag_pred = oobag_pred;
  this->oobag_eval_type = oobag_eval_type;
  this->oobag_eval_every = oobag_eval_every;
@@ -93,12 +100,12 @@ void Forest::init(std::unique_ptr<Data> input_data,
  // # nocov start
  if(verbosity > 1){
 
-  Rcout << "------------ input data dimensions ------------" << std::endl;
-  Rcout << "N observations total: " << data->get_n_rows()    << std::endl;
-  Rcout << "N columns total: "      << data->get_n_cols()    << std::endl;
-  Rcout << "-----------------------------------------------";
-  Rcout << std::endl;
-  Rcout << std::endl;
+  Rcpp::Rcout << "------------ input data dimensions ------------" << std::endl;
+  Rcpp::Rcout << "N observations total: " << data->get_n_rows()    << std::endl;
+  Rcpp::Rcout << "N columns total: "      << data->get_n_cols()    << std::endl;
+  Rcpp::Rcout << "-----------------------------------------------";
+  Rcpp::Rcout << std::endl;
+  Rcpp::Rcout << std::endl;
 
  }
  // # nocov end
@@ -224,6 +231,8 @@ void Forest::grow() {
   thread.join();
  }
 
+ threads.clear();
+
  if (aborted_threads > 0) {
   throw std::runtime_error("User interrupt.");
  }
@@ -234,6 +243,9 @@ void Forest::grow() {
    vi_numer += vi_numer_threads[i];
    vi_denom += vi_denom_threads[i];
   }
+
+  vi_numer_threads.clear();
+  vi_denom_threads.clear();
 
  }
 
@@ -254,9 +266,9 @@ void Forest::grow_single_thread(vec* vi_numer_ptr,
  for (uint i = 0; i < n_tree; ++i) {
 
   if(verbosity > 1){
-   Rcout << "------------ Growing tree " << i << " --------------";
-   Rcout << std::endl;
-   Rcout << std::endl;
+   Rcpp::Rcout << "------------ Growing tree " << i << " --------------";
+   Rcpp::Rcout << std::endl;
+   Rcpp::Rcout << std::endl;
   }
 
   trees[i]->grow(vi_numer_ptr, vi_denom_ptr);
@@ -274,15 +286,15 @@ void Forest::grow_single_thread(vec* vi_numer_ptr,
     seconds time_from_start = duration_cast<seconds>(steady_clock::now() - start_time);
     uint remaining_time = (1 / relative_progress - 1) * time_from_start.count();
 
-    Rcout << "Growing trees: ";
-    Rcout << round(100 * relative_progress) << "%. ";
+    Rcpp::Rcout << "Growing trees: ";
+    Rcpp::Rcout << round(100 * relative_progress) << "%. ";
 
     if(progress < max_progress){
-     Rcout << "~ time remaining: ";
-     Rcout << beautifyTime(remaining_time) << ".";
+     Rcpp::Rcout << "~ time remaining: ";
+     Rcpp::Rcout << beautifyTime(remaining_time) << ".";
     }
 
-    Rcout << std::endl;
+    Rcpp::Rcout << std::endl;
 
     last_time = steady_clock::now();
 
@@ -363,6 +375,8 @@ void Forest::compute_oobag_vi() {
   thread.join();
  }
 
+ threads.clear();
+
  if (aborted_threads > 0) {
   throw std::runtime_error("User interrupt.");
  }
@@ -370,6 +384,8 @@ void Forest::compute_oobag_vi() {
  for(uint i = 0; i < n_thread; ++i){
   vi_numer += vi_numer_threads[i];
  }
+
+ vi_numer_threads.clear();
 
 }
 
@@ -400,15 +416,15 @@ void Forest::compute_oobag_vi_single_thread(vec* vi_numer_ptr) {
     seconds time_from_start = duration_cast<seconds>(steady_clock::now() - start_time);
     uint remaining_time = (1 / relative_progress - 1) * time_from_start.count();
 
-    Rcout << "Computing importance: ";
-    Rcout << round(100 * relative_progress) << "%. ";
+    Rcpp::Rcout << "Computing importance: ";
+    Rcpp::Rcout << round(100 * relative_progress) << "%. ";
 
     if(progress < max_progress){
-     Rcout << "~ time remaining: ";
-     Rcout << beautifyTime(remaining_time) << ".";
+     Rcpp::Rcout << "~ time remaining: ";
+     Rcpp::Rcout << beautifyTime(remaining_time) << ".";
     }
 
-    Rcout << std::endl;
+    Rcpp::Rcout << std::endl;
 
     last_time = steady_clock::now();
 
@@ -471,6 +487,7 @@ void Forest::compute_prediction_accuracy(Data* prediction_data,
 
 }
 
+
 std::vector<std::vector<arma::mat>> Forest::compute_dependence(bool oobag){
 
  std::vector<std::vector<arma::mat>> result;
@@ -503,7 +520,10 @@ std::vector<std::vector<arma::mat>> Forest::compute_dependence(bool oobag){
 
    if(oobag) oobag_denom.fill(0);
 
-   mat preds = predict(oobag);
+   // No. of cols in pred mat depend on the type of forest
+   mat preds;
+   resize_pred_mat(preds);
+   predict_single_thread(data.get(), oobag, preds);
 
    if(pd_type == PD_SUMMARY){
 
@@ -520,6 +540,8 @@ std::vector<std::vector<arma::mat>> Forest::compute_dependence(bool oobag){
    } else if(pd_type == PD_ICE) {
 
     result_k.push_back(preds);
+
+
 
    }
 
@@ -572,8 +594,8 @@ mat Forest::predict(bool oobag) {
 
    threads.emplace_back(&Forest::predict_multi_thread,
                         this, i, data.get(), oobag,
-                        &(result_threads[i]),
-                        &(oobag_denom_threads[i]));
+                        std::ref(result_threads[i]),
+                        std::ref(oobag_denom_threads[i]));
   }
 
   if(verbosity == 1){
@@ -584,6 +606,8 @@ mat Forest::predict(bool oobag) {
   for (auto &thread : threads) {
    thread.join();
   }
+
+  threads.clear();
 
   for(uint i = 0; i < n_thread; ++i){
 
@@ -609,6 +633,9 @@ mat Forest::predict(bool oobag) {
    }
 
   }
+
+  result_threads.clear();
+  oobag_denom_threads.clear();
 
  }
 
@@ -652,12 +679,12 @@ void Forest::predict_single_thread(Data* prediction_data,
 
   if(verbosity > 1){
    if(oobag){
-    Rcout << "--- Computing oobag predictions: tree " << i << " ---";
+    Rcpp::Rcout << "--- Computing oobag predictions: tree " << i << " ---";
    } else {
-    Rcout << "------ Computing predictions: tree " << i << " -----";
+    Rcpp::Rcout << "------ Computing predictions: tree " << i << " -----";
    }
-   Rcout << std::endl;
-   Rcout << std::endl;
+   Rcpp::Rcout << std::endl;
+   Rcpp::Rcout << std::endl;
   }
 
   trees[i]->predict_leaf(prediction_data, oobag);
@@ -669,11 +696,11 @@ void Forest::predict_single_thread(Data* prediction_data,
   } else if (!pred_aggregate){
 
    vec col_i = result.unsafe_col(i);
-   trees[i]->predict_value(&col_i, &oobag_denom, pred_type, oobag);
+   trees[i]->predict_value(col_i, oobag_denom, pred_type, oobag);
 
   } else {
 
-   trees[i]->predict_value(&result, &oobag_denom, pred_type, oobag);
+   trees[i]->predict_value(result, oobag_denom, pred_type, oobag);
 
   }
 
@@ -690,15 +717,15 @@ void Forest::predict_single_thread(Data* prediction_data,
     seconds time_from_start = duration_cast<seconds>(steady_clock::now() - start_time);
     uint remaining_time = (1 / relative_progress - 1) * time_from_start.count();
 
-    Rcout << "Computing predictions: ";
-    Rcout << round(100 * relative_progress) << "%. ";
+    Rcpp::Rcout << "Computing predictions: ";
+    Rcpp::Rcout << round(100 * relative_progress) << "%. ";
 
     if(progress < max_progress){
-     Rcout << "~ time remaining: ";
-     Rcout << beautifyTime(remaining_time) << ".";
+     Rcpp::Rcout << "~ time remaining: ";
+     Rcpp::Rcout << beautifyTime(remaining_time) << ".";
     }
 
-    Rcout << std::endl;
+    Rcpp::Rcout << std::endl;
 
     last_time = steady_clock::now();
 
@@ -722,8 +749,8 @@ void Forest::predict_single_thread(Data* prediction_data,
 void Forest::predict_multi_thread(uint thread_idx,
                                   Data* prediction_data,
                                   bool oobag,
-                                  mat* result_ptr,
-                                  vec* denom_ptr) {
+                                  mat& result_ptr,
+                                  vec& denom_ptr) {
 
  if (thread_ranges.size() > thread_idx + 1) {
 
@@ -733,12 +760,12 @@ void Forest::predict_multi_thread(uint thread_idx,
 
    if(pred_type == PRED_TERMINAL_NODES){
 
-    (*result_ptr).col(i) = conv_to<vec>::from(trees[i]->get_pred_leaf());
+    result_ptr.col(i) = conv_to<vec>::from(trees[i]->get_pred_leaf());
 
    } else if (!pred_aggregate){
 
-    vec col_i = (*result_ptr).unsafe_col(i);
-    trees[i]->predict_value(&col_i, denom_ptr, pred_type, oobag);
+    vec col_i = result_ptr.unsafe_col(i);
+    trees[i]->predict_value(col_i, denom_ptr, pred_type, oobag);
 
    } else {
 
@@ -834,15 +861,15 @@ void Forest::show_progress(std::string operation, size_t max_progress) {
    seconds time_from_start = duration_cast<seconds>(steady_clock::now() - start_time);
    uint remaining_time = (1 / relative_progress - 1) * time_from_start.count();
 
-   Rcout << operation << ": ";
-   Rcout << round(100 * relative_progress) << "%. ";
+   Rcpp::Rcout << operation << ": ";
+   Rcpp::Rcout << round(100 * relative_progress) << "%. ";
 
    if(progress < max_progress){
-    Rcout << "~ time remaining: ";
-    Rcout << beautifyTime(remaining_time) << ".";
+    Rcpp::Rcout << "~ time remaining: ";
+    Rcpp::Rcout << beautifyTime(remaining_time) << ".";
    }
 
-   Rcout << std::endl;
+   Rcpp::Rcout << std::endl;
 
    last_time = steady_clock::now();
 

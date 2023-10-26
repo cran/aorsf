@@ -11,7 +11,6 @@
 #include "globals.h"
 
  using namespace arma;
- using namespace Rcpp;
 
  namespace aorsf {
 
@@ -20,6 +19,11 @@
  public:
 
   Data() = default;
+
+  Data(const Data&) = delete;
+  Data& operator=(const Data&) = delete;
+
+  virtual ~Data() = default;
 
   Data(arma::mat& x,
        arma::mat& y,
@@ -36,8 +40,6 @@
 
   }
 
-  Data(const Data&) = delete;
-  Data& operator=(const Data&) = delete;
 
   arma::uword get_n_rows() {
    return(n_rows);
@@ -87,6 +89,28 @@
 
   arma::vec w_subvec(arma::uvec& indices){
    return(w(indices));
+  }
+
+  // multiply X matrix by lincomb coefficients
+  // without taking a sub-matrix of X
+  arma::vec x_submat_mult_beta(arma::uvec& x_rows,
+                               arma::uvec& x_cols,
+                               arma::vec& beta){
+
+   arma::vec out(x_rows.size());
+   arma::uword i = 0;
+
+   for(auto row : x_rows){
+    arma::uword j = 0;
+    for(auto col : x_cols){
+     out[i] += x.at(row, col) * beta[j];
+     j++;
+    }
+    i++;
+   }
+
+   return(out);
+
   }
 
   void permute_col(arma::uword j, std::mt19937_64& rng){

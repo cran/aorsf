@@ -3,43 +3,6 @@
 #'
 #' Fit an oblique random survival forest
 #'
-#' @srrstats {G1.4} *documented with Roxygen*
-#' @srrstats {G1.1} *aorsf is an improvement of the ORSF algorithm implemented in obliqueRSF, which was an extension of Hemant Ishwaran's random survival forest.*
-#' @srrstats {G1.3} *linear combinations of inputs defined.*
-#' @srrstats {G1.5} *orsf() will be used in publications to benchmark performance of the aorsf package in computation speed and prediction accuracy.*
-#' @srrstats {G1.6} *orsf() should be used to compare performance claims with other packages.*
-#' @srrstats {G2.1} *Inputs have indication of type in parentheticals. This format is used in all exported functions.*
-#' @srrstats {G5.2a} *messages produced here (e.g., with `stop()`, `warning()`, `message()`) are unique and make effort to highlight the specific data elements that cause the error*
-#' @srrstats {G2.0a} *secondary documentation of arg lengths. When an input has length 1, a parenthetical gives the specific type of value it should be and uses a singular description (e.g., an integer). When inputs have length > 1, a vector description is used (e.g., integer vector)*
-#' @srrstats {ML1.0} *Documentation includes a subsection that makes clear conceptual distinction between train and test data*
-#' @srrstats {ML3.3} *Properties and behaviours of aorsf models are explicitly compared with objects produced by other ML software in the "Introduction to aorsf" vignette.*
-#' @srrstats {ML4.0} *orsf() is a unified single-function interface to model training. orsf_train() is able to receive as input an untrained model specified by orsf() when no_fit = TRUE. Models with categorically different specifications are able to be submitted to the same model training function.*
-#' @srrstats {ML5.2, ML5.2a} *The structure and functionality of trained aorsf objects is documented through vignettes. In particular, basic functionality extending from the aorsf class is explicitly described in the "Introduction to aorsf" vignette, and additional functionality is documented in the "Out-of-bag predictions and evaluation" and "Compute partial dependence with ORSF" vignettes. Each vignettes demonstrates functionality clearly with example code.*
-#' @srrstats {ML5.3} *Assessment of model performance is implemented through out-of-bag error, which is finalized after a model is trained*
-#' @srrstats {ML5.4} *The "Out-of-bag predictions and evaluation" vignette shows how to implement built-in or user-specified functions for this functionality.*
-#' @srrstats {ML1.1} *Training data are labelled as "train".*
-#' @srrstats {G2.5} *factors used as predictors can be ordered and un-ordered.*
-#' @srrstats {ML4.1b} *The value of out-of-bag error can be returned for every oobag_eval_every step.*
-#' @srrstats {ML4.2} *The extraction of out-of-bag error is explicitly documented with example code in the "Out-of-bag predictions and evaluation" vignette.*
-#' @srrstats {ML3.5b} *Users can specify the kind of loss function to assess distance between model estimates and desired output. This is discussed in detail in the "Out-of-bag predictions and evaluation" vignette.*
-#' @srrstats {ML5.4a} *Harrell's C-statistic, an internally utilized metric for model performance, is clearly and distinctly documented and cited.*
-#' @srrstats {ML5.4b} *It is possible to submit custom metrics to a model assessment function, and the ability to do so is clearly documented. The "Out-of-bag predictions and evaluation" vignette provides example code.*
-#' @srrstats {ML2.0, ML2.0b} *orsf() enables pre-processing steps to be defined and parametrized without fitting a model when no_fit is TRUE, returning an object with a defined class minimally intended to implement a default `print` method which summarizes the model specifications.*
-#' @srrstats {ML3.0} *Model specification can be implemented prior to actual model fitting or training*
-#' @srrstats {ML3.0a} *As pre-processing, model specification, and training are controlled by the orsf() function, an input parameter (no_fit) enables models to be specified yet not fitted.*
-#' @srrstats {ML3.0c} *when no_fit=TRUE, orsf() will return an object that can be directly trained using orsf_train().*
-#' @srrstats {ML1.6a} *Explain why missing values are not admitted.*
-#' @srrstats {G1.0} *Jaeger et al describes the ORSF algorithm that aorsf is based on. Note: aorsf uses a different approach to create linear combinations of inputs for speed reasons, but orsf_control_net() allows users to make ensembles that are very similar to obliqueRSF::ORSF().*
-#' @srrstats {ML1.6b} *Explicit example showing how missing values may be imputed rather than discarded.*
-#' @srrstats {ML6.0} *Reference section explicitly links to aorsf-bench, which includes training and testing stages, and which clearly indicates a need for distinct training and test data sets.*
-#' @srrstats {ML6.1} *clearly document how aorsf can be embedded within a typical full ML workflow.*
-#' @srrstats {ML6.1a} *Embed aorsf within a full workflow using tidymodels and tidyverse*
-#' @srrstats {ML5.2b} *Documentation includes examples of how to save and re-load trained model objects for their re-use.*
-#' @srrstats {ML2.3} *Values associated with transformations are recorded in the object returned by orsf()*
-#' @srrstats {ML1.3} *Input data are partitioned as training (in-bag) and test (out-of-bag) data within orsf_fit().*
-#' @srrstats {ML4.1} *orsf_fit() retains information on model-internal parameters.*
-#' @srrstats {ML4.1a} *orsf_fit() output includes all model-internal parameters, specifically the linear combination coefficients.*
-#'
 #' @param data a `r roxy_data_allowed()` that contains the
 #'  relevant variables.
 #'
@@ -199,8 +162,6 @@
 #'
 #' @param object an untrained 'aorsf' object, created by setting
 #'   `no_fit = TRUE` in `orsf()`.
-#'
-#' @srrstats {ML5.0} *The result of applying orsf training processes results in a single model object.*
 #'
 #' @return an accelerated oblique RSF object (`aorsf`)
 #'
@@ -365,8 +326,6 @@ orsf <- function(data,
                  verbose_progress = FALSE,
                  ...){
 
- #' @srrstats {G2.8} *As part of initial pre-processing, run checks on inputs to ensure that all other sub-functions receive inputs of a single defined class or type.*
-
  check_dots(list(...), .f = orsf)
 
  if(!is.data.frame(data))
@@ -415,51 +374,6 @@ orsf <- function(data,
   )
  }
 
- orsf_type <- attr(control, 'type')
-
- switch(
-  orsf_type,
-
-  'fast' = {
-
-   control_net <- orsf_control_net()
-   control_cph <- control
-   f_beta      <- function(x) x
-
-  },
-
-  'cph' = {
-
-   control_net <- orsf_control_net()
-   control_cph <- control
-   f_beta      <- function(x) x
-
-  },
-
-  'net' = {
-
-   if (!requireNamespace("glmnet", quietly = TRUE)) {
-    stop(
-     "Package \"glmnet\" must be installed to use",
-     " orsf_control_net() with orsf().",
-     call. = FALSE
-    )
-   }
-
-   control_net <- control
-   control_cph <- orsf_control_fast(do_scale = FALSE)
-   f_beta      <- penalized_cph
-  },
-
-  "custom" = {
-
-   control_net <- orsf_control_net()
-   control_cph <- orsf_control_fast(do_scale = FALSE)
-   f_beta      <- control$beta_fun
-
-  }
-
- )
 
  if(is.null(oobag_fun)){
 
@@ -484,14 +398,6 @@ orsf <- function(data,
  if(oobag_pred_type == 'leaf') type_oobag_eval <- 'none'
 
 
- cph_method <- control_cph$cph_method
- cph_eps <- control_cph$cph_eps
- cph_iter_max <- control_cph$cph_iter_max
- cph_do_scale <- control_cph$cph_do_scale
- net_alpha <- control_net$net_alpha
- net_df_target <- control_net$net_df_target
-
-
  formula_terms <- suppressWarnings(stats::terms(formula, data=data))
 
  if(attr(formula_terms, 'response') == 0)
@@ -499,20 +405,36 @@ orsf <- function(data,
 
  names_y_data <- all.vars(formula[[2]])
 
- if(length(names_y_data) == 1){
-  # this is fine if the response is a Surv object,
-  if(!inherits(data[[names_y_data]], 'Surv')){
-   # otherwise it will be a problem
-   stop("formula must have two variables (time & status) as the response",
-        call. = FALSE)
+ outcome_type <- infer_outcome_type(names_y_data, data)
+
+ if(outcome_type %in% c('regression', 'classification')) stop("not ready yet")
+
+ if(control$tree_type == 'unknown'){
+
+  if(outcome_type == 'unknown'){
+   stop("could not determine outcome type", call. = FALSE)
+  }
+
+  control$tree_type <- outcome_type
+
+ }
+
+ if(control$lincomb_type == 'net'){
+
+  if (!requireNamespace("glmnet", quietly = TRUE)) {
+   stop(
+    "Package \"glmnet\" must be installed to use",
+    " orsf_control_net() with orsf().",
+    call. = FALSE
+   )
   }
 
  }
 
- if(length(names_y_data) > 2){
-  stop("formula must have two variables (time & status) as the response",
-       call. = FALSE)
- }
+ tree_type_R = switch(outcome_type,
+                      'classification' = 1,
+                      'regression'= 2,
+                      'survival' = 3)
 
  types_y_data <- vector(mode = 'character',
                         length = length(names_y_data))
@@ -537,10 +459,6 @@ orsf <- function(data,
   stop(msg, call. = FALSE)
  }
 
- #' @srrstats {G2.7} *aorsf accepts as input numeric and categorical predictor variables, including those with unit class. I do not think it is necessary to incorporate any other type of input, since it is relatively straightforward to convert data into a numeric or categorical format.*
-
- #' @srrstats {G2.11} *I cannot write code for every possible vector class to ensure that the vector data will be safely coerced into a a valid class and the attributes will be stored in the orsf_out object. It is much easier and safer for the user to convert a few columns to numeric or factor than it is for me to attempt writing code that will safely coerce every type of vector. That being said, I do find units columns to be helpful and I've written some code to make them an allowable class in input data.*
-
  types_x_data <- check_var_types(data,
                                  names_x_data,
                                  valid_types = c('numeric',
@@ -548,14 +466,6 @@ orsf <- function(data,
                                                  'units',
                                                  'factor',
                                                  'ordered'))
-
- #' @srrstats {G2.6} *ensure that one-dimensional inputs are appropriately pre-processed. aorsf does not deal with missing data as many other R packages are very good at dealing with it.*
-
- #' @srrstats {G2.13} *check for missing data as part of initial pre-processing prior to passing data to analytic algorithms.*
-
- #' @srrstats {G2.15} *Never pass data with potential missing values to any base routines.*
-
- #' @srrstats {G2.16} *Throw hard errors if undefined values are detected.*
 
  for(i in c(names_y_data, names_x_data)){
 
@@ -667,14 +577,6 @@ orsf <- function(data,
 
  if(is.null(mtry)) mtry <- ceiling(sqrt(ncol(x)))
 
- if(is.null(net_df_target)) net_df_target <- mtry
-
- # warn instead?
- if(net_df_target > mtry)
-  stop("net_df_target = ", net_df_target,
-       " must be <= mtry, which is ", mtry,
-       call. = FALSE)
-
  n_events <- collapse::fsum(y[, 2])
 
  # some additional checks that are dependent on the outcome variable
@@ -685,6 +587,22 @@ orsf <- function(data,
   bound = ncol(x),
   append_to_msg = "(number of columns in the one-hot encoded x-matrix)"
  )
+
+ if(is.null(control$lincomb_df_target)){
+
+  control$lincomb_df_target <- mtry
+
+ } else {
+
+  check_arg_lteq(
+   arg_value = control$lincomb_df_target,
+   arg_name = 'df_target',
+   bound = mtry,
+   append_to_msg = "(number of randomly selected predictors)"
+  )
+
+ }
+
 
  check_arg_lteq(
   arg_value = leaf_min_events,
@@ -725,8 +643,8 @@ orsf <- function(data,
  }
 
  sorted <-
-  collapse::radixorder(y[, 1],  # order this way for risk sets
-                       -y[, 2]) # order this way for oob C-statistic.
+  collapse::radixorder(y[, 1],  # order for risk sets
+                       -y[, 2]) # order for oob C-statistic.
 
  if(is.null(weights)) weights <- rep(1, nrow(x))
 
@@ -741,9 +659,7 @@ orsf <- function(data,
   tree_seeds <- sample(x = n_tree*10, size = n_tree, replace = FALSE)
  }
 
-
  vi_max_pvalue = 0.01
- tree_type_R = 3
 
  orsf_out <- orsf_cpp(x = x_sort,
                       y = y_sort,
@@ -761,8 +677,6 @@ orsf <- function(data,
                                          "permute" = 2,
                                          "anova" = 3),
                       vi_max_pvalue = vi_max_pvalue,
-                      lincomb_R_function = f_beta,
-                      oobag_R_function = f_oobag_eval,
                       leaf_min_events = leaf_min_events,
                       leaf_min_obs = leaf_min_obs,
                       split_rule_R = switch(split_rule,
@@ -773,18 +687,18 @@ orsf <- function(data,
                       split_min_stat = split_min_stat,
                       split_max_cuts = n_split,
                       split_max_retry = n_retry,
-                      lincomb_type_R = switch(orsf_type,
-                                              'fast' = 1,
-                                              'cph' = 1,
+                      lincomb_R_function = control$lincomb_R_function,
+                      lincomb_type_R = switch(control$lincomb_type,
+                                              'glm' = 1,
                                               'random' = 2,
                                               'net' = 3,
                                               'custom' = 4),
-                      lincomb_eps = cph_eps,
-                      lincomb_iter_max = cph_iter_max,
-                      lincomb_scale = cph_do_scale,
-                      lincomb_alpha = net_alpha,
-                      lincomb_df_target = net_df_target,
-                      lincomb_ties_method = switch(tolower(cph_method),
+                      lincomb_eps = control$lincomb_eps,
+                      lincomb_iter_max = control$lincomb_iter_max,
+                      lincomb_scale = control$lincomb_scale,
+                      lincomb_alpha = control$lincomb_alpha,
+                      lincomb_df_target = control$lincomb_df_target,
+                      lincomb_ties_method = switch(tolower(control$lincomb_ties_method),
                                                    'breslow' = 0,
                                                    'efron'   = 1),
                       pred_type_R = switch(oobag_pred_type,
@@ -798,6 +712,7 @@ orsf <- function(data,
                       pred_aggregate = oobag_pred_type != 'leaf',
                       pred_horizon = oobag_pred_horizon,
                       oobag = oobag_pred,
+                      oobag_R_function = f_oobag_eval,
                       oobag_eval_type_R = switch(type_oobag_eval,
                                                  'none' = 0,
                                                  'cstat' = 1,
@@ -886,20 +801,13 @@ orsf <- function(data,
  attr(orsf_out, 'split_min_obs')       <- split_min_obs
  attr(orsf_out, 'split_min_stat')      <- split_min_stat
  attr(orsf_out, 'na_action')           <- na_action
- attr(orsf_out, 'cph_method')          <- cph_method
- attr(orsf_out, 'cph_eps')             <- cph_eps
- attr(orsf_out, 'cph_iter_max')        <- cph_iter_max
- attr(orsf_out, 'cph_do_scale')        <- cph_do_scale
- attr(orsf_out, 'net_alpha')           <- net_alpha
- attr(orsf_out, 'net_df_target')       <- net_df_target
+ attr(orsf_out, 'control')             <- control
  attr(orsf_out, 'numeric_bounds')      <- numeric_bounds
  attr(orsf_out, 'means')               <- means
  attr(orsf_out, 'modes')               <- modes
  attr(orsf_out, 'standard_deviations') <- standard_deviations
  attr(orsf_out, 'trained')             <- !no_fit
  attr(orsf_out, 'n_retry')             <- n_retry
- attr(orsf_out, 'orsf_type')           <- orsf_type
- attr(orsf_out, 'f_beta')              <- f_beta
  attr(orsf_out, 'f_oobag_eval')        <- f_oobag_eval
  attr(orsf_out, 'type_oobag_eval')     <- type_oobag_eval
  attr(orsf_out, 'oobag_pred')          <- oobag_pred
@@ -920,7 +828,6 @@ orsf <- function(data,
  attr(orsf_out, 'sample_with_replacement') <- sample_with_replacement
  attr(orsf_out, 'sample_fraction')         <- sample_fraction
 
- #' @srrstats {ML5.0a} *orsf output has its own class*
  class(orsf_out) <- "orsf_fit"
 
  if(importance != 'none' && !no_fit){
@@ -992,8 +899,6 @@ orsf_data_prep.recipe <- function(data, ...){
 
 }
 
-#' @srrstats {ML2.0a} *objects returned from orsf() with no_fit = TRUE can be directly submitted to orsf_train to train the model specification.*
-#'
 #' @rdname orsf
 #' @export
 orsf_train <- function(object){
@@ -1003,8 +908,6 @@ orsf_train <- function(object){
 
 
 #' Estimate training time
-#'
-#' @srrstats {ML4.5} *include a function to estimate likely time to train a specified model*
 #'
 #' @param object an untrained `aorsf` object
 #'
@@ -1128,6 +1031,8 @@ orsf_train_ <- function(object,
 
  oobag_eval_every <- min(n_tree, get_oobag_eval_every(object))
 
+ control <- get_control(object)
+
  orsf_out <- orsf_cpp(x = x_sort,
                       y = y_sort,
                       w = w_sort,
@@ -1144,7 +1049,6 @@ orsf_train_ <- function(object,
                                          "permute" = 2,
                                          "anova" = 3),
                       vi_max_pvalue = get_vi_max_pvalue(object),
-                      lincomb_R_function = get_f_beta(object),
                       oobag_R_function = get_f_oobag_eval(object),
                       leaf_min_events = get_leaf_min_events(object),
                       leaf_min_obs = get_leaf_min_obs(object),
@@ -1156,22 +1060,21 @@ orsf_train_ <- function(object,
                       split_min_stat = get_split_min_stat(object),
                       split_max_cuts = get_n_split(object),
                       split_max_retry = get_n_retry(object),
-                      lincomb_type_R = switch(get_orsf_type(object),
-                                              'fast' = 1,
-                                              'cph' = 1,
+
+                      lincomb_R_function = control$lincomb_R_function,
+                      lincomb_type_R = switch(control$lincomb_type,
+                                              'glm' = 1,
                                               'random' = 2,
                                               'net' = 3,
                                               'custom' = 4),
-                      lincomb_eps = get_cph_eps(object),
-                      lincomb_iter_max = get_cph_iter_max(object),
-                      lincomb_scale = get_cph_do_scale(object),
-                      lincomb_alpha = get_net_alpha(object),
-                      lincomb_df_target = get_net_df_target(object),
-                      lincomb_ties_method = switch(
-                       tolower(get_cph_method(object)),
-                       'breslow' = 0,
-                       'efron'   = 1
-                      ),
+                      lincomb_eps = control$lincomb_eps,
+                      lincomb_iter_max = control$lincomb_iter_max,
+                      lincomb_scale = control$lincomb_scale,
+                      lincomb_alpha = control$lincomb_alpha,
+                      lincomb_df_target = control$lincomb_df_target,
+                      lincomb_ties_method = switch(tolower(control$lincomb_ties_method),
+                                                   'breslow' = 0,
+                                                   'efron'   = 1),
                       pred_type_R = switch(get_oobag_pred_type(object),
                                            "none" = 0,
                                            "risk" = 1,

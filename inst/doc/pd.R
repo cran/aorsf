@@ -25,6 +25,7 @@ pbc_orsf_test <- pbc_orsf[-index_train, ]
 
 fit <- orsf(data = pbc_orsf_train, 
             formula = Surv(time, status) ~ . - id,
+            n_tree = 50,
             oobag_pred_horizon = pred_horizon)
 
 fit
@@ -59,6 +60,7 @@ set.seed(329730)
 
 fit <- orsf(pbc_orsf, 
             Surv(time, status) ~ . -id,
+            n_tree = 50,
             oobag_pred_horizon = pred_horizon)
 
 
@@ -107,7 +109,7 @@ pd_two_vars
 
 ## -----------------------------------------------------------------------------
 
-pd_smry <- orsf_summarize_uni(fit)
+pd_smry <- orsf_summarize_uni(fit, n_variables = 4)
 
 pd_smry
 

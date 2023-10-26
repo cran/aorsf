@@ -18,6 +18,7 @@ library(SurvMetrics)
 fit <- orsf(data = pbc_orsf, 
             formula = Surv(time, status) ~ . - id,
             oobag_pred_type = 'surv',
+            n_tree = 5,
             oobag_pred_horizon = 2000)
 
 hist(fit$pred_oobag, 
@@ -37,18 +38,21 @@ fit$eval_oobag$stat_values
 
 fit <- orsf(data = pbc_orsf,
             formula = Surv(time, status) ~ . - id,
-            n_tree = 50,
+            n_tree = 20,
+            tree_seeds = 2,
             oobag_pred_type = 'surv',
             oobag_pred_horizon = 2000,
             oobag_eval_every = 1)
 
 plot(
- x = seq(1, 50, by = 1),
+ x = seq(1, 20, by = 1),
  y = fit$eval_oobag$stat_values, 
  main = 'Out-of-bag C-statistic computed after each new tree is grown.',
  xlab = 'Number of trees grown',
  ylab = fit$eval_oobag$stat_type
 )
+
+lines(x=seq(1, 20), y = fit$eval_oobag$stat_values)
 
 
 ## -----------------------------------------------------------------------------
@@ -77,13 +81,14 @@ oobag_fun_brier(y_mat = pbc_orsf[,c('time', 'status')],
 
 fit <- orsf(data = pbc_orsf,
             formula = Surv(time, status) ~ . - id,
-            n_tree = 50,
+            n_tree = 20,
+            tree_seeds = 2,
             oobag_pred_horizon = 2000,
             oobag_fun = oobag_fun_brier,
             oobag_eval_every = 1)
 
 plot(
- x = seq(1, 50, by = 1),
+ x = seq(1, 20, by = 1),
  y = fit$eval_oobag$stat_values, 
  main = 'Out-of-bag error computed after each new tree is grown.',
  sub = 'For the Brier score, lower values indicate more accurate predictions',
@@ -91,35 +96,7 @@ plot(
  ylab = "Brier score"
 )
 
-
-## -----------------------------------------------------------------------------
-
-oobag_fun_tdep_cstat <- function(y_mat, w_vec, s_vec){
-
- as.numeric(
-  SurvMetrics::Cindex(
-   object = Surv(time = y_mat[, 1], event = y_mat[, 2]), 
-   predicted = s_vec,
-   t_star = 2000
-  )
- )
-
-}
-
-fit <- orsf(data = pbc_orsf,
-            formula = Surv(time, status) ~ . - id,
-            n_tree = 50,
-            oobag_pred_horizon = 2000,
-            oobag_fun = oobag_fun_tdep_cstat,
-            oobag_eval_every = 1)
-
-plot(
- x = seq(50),
- y = fit$eval_oobag$stat_values, 
- main = 'Out-of-bag time-dependent AUC\ncomputed after each new tree is grown.',
- xlab = 'Number of trees grown',
- ylab = "AUC at t = 2,000"
-)
+lines(x=seq(1, 20), y = fit$eval_oobag$stat_values)
 
 
 ## -----------------------------------------------------------------------------
@@ -136,32 +113,15 @@ y_mat <- cbind(time = test_time, status = test_status)
 s_vec <- seq(0.9, 0.1, length.out = 100)
 
 # see 1 in the checklist above
-names(formals(oobag_fun_tdep_cstat)) == c("y_mat", "w_vec", "s_vec")
+names(formals(oobag_fun_brier)) == c("y_mat", "w_vec", "s_vec")
 
-test_output <- oobag_fun_tdep_cstat(y_mat = y_mat, 
-                                    w_vec = w_vec,
-                                    s_vec = s_vec)
+test_output <- oobag_fun_brier(y_mat = y_mat, 
+                               w_vec = w_vec,
+                               s_vec = s_vec)
 
 # test output should be numeric
 is.numeric(test_output)
 # test_output should be a numeric value of length 1
 length(test_output) == 1
-
-
-## -----------------------------------------------------------------------------
-oobag_fun_tdep_cstat_inverse <- function(y_mat, w_vec, s_vec){
- 1 - oobag_fun_tdep_cstat(y_mat, w_vec, s_vec)
-}
-
-## -----------------------------------------------------------------------------
-
-fit_tdep_cstat <- orsf(data = pbc_orsf,
-                       formula = Surv(time, status) ~ . - id,
-                       n_tree = 100,
-                       oobag_pred_horizon = 2000,
-                       oobag_fun = oobag_fun_tdep_cstat_inverse,
-                       importance = 'negate')
-
-fit_tdep_cstat$importance
 
 

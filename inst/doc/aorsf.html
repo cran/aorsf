@@ -367,25 +367,26 @@ accelerated ORSF model, which is the default method used by
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">329</span>)</span>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>orsf_fit <span class="ot">&lt;-</span> <span class="fu">orsf</span>(<span class="at">data =</span> pbc_orsf, </span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>                 <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id)</span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>orsf_fit</span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt; ---------- Oblique random survival forest</span></span>
-<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt;      Linear combinations: Accelerated</span></span>
-<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt;           N observations: 276</span></span>
-<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co">#&gt;                 N events: 111</span></span>
-<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co">#&gt;                  N trees: 500</span></span>
-<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="co">#&gt;       N predictors total: 17</span></span>
-<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="co">#&gt;    N predictors per node: 5</span></span>
-<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a><span class="co">#&gt;  Average leaves per tree: 21</span></span>
-<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="co">#&gt; Min observations in leaf: 5</span></span>
-<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a><span class="co">#&gt;       Min events in leaf: 1</span></span>
-<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a><span class="co">#&gt;           OOB stat value: 0.84</span></span>
-<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a><span class="co">#&gt;            OOB stat type: Harrell&#39;s C-statistic</span></span>
-<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a><span class="co">#&gt;      Variable importance: anova</span></span>
-<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb1-25"><a href="#cb1-25" tabindex="-1"></a><span class="co">#&gt; -----------------------------------------</span></span></code></pre></div>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>                 <span class="at">n_tree =</span> <span class="dv">5</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>                 <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>orsf_fit</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co">#&gt; ---------- Oblique random survival forest</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt;      Linear combinations: Accelerated Cox regression</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co">#&gt;           N observations: 276</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co">#&gt;                 N events: 111</span></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="co">#&gt;                  N trees: 5</span></span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="co">#&gt;       N predictors total: 17</span></span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a><span class="co">#&gt;    N predictors per node: 5</span></span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="co">#&gt;  Average leaves per tree: 20</span></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a><span class="co">#&gt; Min observations in leaf: 5</span></span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a><span class="co">#&gt;       Min events in leaf: 1</span></span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a><span class="co">#&gt;           OOB stat value: 0.80</span></span>
+<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a><span class="co">#&gt;            OOB stat type: Harrell&#39;s C-statistic</span></span>
+<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a><span class="co">#&gt;      Variable importance: anova</span></span>
+<span id="cb1-25"><a href="#cb1-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb1-26"><a href="#cb1-26" tabindex="-1"></a><span class="co">#&gt; -----------------------------------------</span></span></code></pre></div>
 <p>you may notice that the first input of <code>aorsf</code> is
 <code>data</code>. This is a design choice that makes it easier to use
 <code>orsf</code> with pipes (i.e., <code>%&gt;%</code> or
@@ -394,7 +395,8 @@ accelerated ORSF model, which is the default method used by
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>orsf_fit <span class="ot">&lt;-</span> pbc_orsf <span class="sc">|&gt;</span> </span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a> <span class="fu">select</span>(<span class="sc">-</span>id) <span class="sc">|&gt;</span> </span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a> <span class="fu">orsf</span>(<span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> .)</span></code></pre></div>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a> <span class="fu">orsf</span>(<span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> .,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>      <span class="at">n_tree =</span> <span class="dv">5</span>)</span></code></pre></div>
 </div>
 <div id="interpretation" class="section level2">
 <h2>Interpretation</h2>
@@ -411,35 +413,35 @@ of that variable by -1 and then re-computes the out-of-sample (sometimes
 referred to as out-of-bag) accuracy of the ORSF model.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a></span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">orsf_vi_negate</span>(orsf_fit)</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt;         bili       copper          sex        stage      protime      albumin </span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; 1.268573e-01 4.722643e-02 3.539663e-02 2.391576e-02 2.362569e-02 2.269569e-02 </span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt;          age         chol      ascites          ast      spiders        edema </span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; 2.114132e-02 1.514996e-02 1.378940e-02 1.160390e-02 7.480721e-03 7.041304e-03 </span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;       hepato          trt     alk.phos         trig     platelet </span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; 4.740342e-03 4.015211e-03 3.516004e-03 3.220431e-03 9.222727e-05</span></span></code></pre></div></li>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt;         bili       copper      albumin          age       hepato      protime </span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt;  0.122002394  0.096358017  0.036400482  0.028834332  0.026420760  0.023000353 </span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt;          sex         chol      ascites        edema     platelet      spiders </span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;  0.022483102  0.022418909  0.018742854  0.009798854  0.008071339  0.005930916 </span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;         trig        stage          ast          trt     alk.phos </span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;  0.003518788  0.002754882  0.001167876 -0.001060327 -0.003055007</span></span></code></pre></div></li>
 <li><p>You can also compute variable importance using permutation, a
 more classical approach.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">orsf_vi_permute</span>(orsf_fit)</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt;          bili        copper       protime       albumin       ascites </span></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;  0.0573029369  0.0229347600  0.0129885752  0.0127466482  0.0125535916 </span></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;           age         stage          chol           ast       spiders </span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt;  0.0122590392  0.0112560994  0.0073812671  0.0064495345  0.0057263668 </span></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;         edema           sex        hepato      alk.phos          trig </span></span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt;  0.0050661360  0.0025134767  0.0024991024  0.0012050730  0.0007105787 </span></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;           trt      platelet </span></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; -0.0003760111 -0.0010029571</span></span></code></pre></div></li>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt;        copper          bili       ascites       albumin           age </span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;  0.0608701256  0.0451519919  0.0291483213  0.0142535184  0.0128600320 </span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;         stage       protime           trt         edema          trig </span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt;  0.0094346640  0.0082164587  0.0067024759  0.0065563853  0.0062649355 </span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;          chol       spiders           ast           sex      platelet </span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt;  0.0060757549  0.0053818120  0.0028757013  0.0028113033  0.0015161714 </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;      alk.phos        hepato </span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; -0.0005739611 -0.0023184389</span></span></code></pre></div></li>
 <li><p>A faster alternative to permutation and negation importance is
 ANOVA importance, which computes the proportion of times each variable
 obtains a low p-value (p &lt; 0.01) while the forest is grown.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a></span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">orsf_vi_anova</span>(orsf_fit)</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt;    ascites       bili      edema     copper    albumin        age    protime </span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; 0.49651741 0.42823529 0.30321331 0.29971042 0.25576923 0.25349487 0.24812406 </span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt;      stage       chol        ast     hepato    spiders        sex       trig </span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; 0.20988953 0.19219653 0.17189030 0.16419612 0.16311659 0.14357054 0.13645621 </span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt;   alk.phos   platelet        trt </span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; 0.10760402 0.07955641 0.07639621</span></span></code></pre></div></li>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt;    ascites     copper       bili      edema        age      stage     hepato </span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; 0.70000000 0.36363636 0.33333333 0.33074768 0.23809524 0.22222222 0.16666667 </span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt;   alk.phos    spiders       chol        sex   platelet       trig        ast </span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; 0.15789474 0.15384615 0.14285714 0.11764706 0.11538462 0.10526316 0.08000000 </span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt;    protime        trt </span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; 0.06666667 0.04761905</span></span></code></pre></div></li>
 </ul>
 </div>
 <div id="partial-dependence-pd" class="section level3">
@@ -469,39 +471,10 @@ a function of a predictor.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a></span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>orsf_net <span class="ot">&lt;-</span> <span class="fu">orsf</span>(<span class="at">data =</span> pbc_orsf, </span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                 <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id, </span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                 <span class="at">control =</span> <span class="fu">orsf_control_net</span>(),</span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                 <span class="at">n_tree =</span> <span class="dv">50</span>)</span></code></pre></div>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                 <span class="at">control =</span> <span class="fu">orsf_control_net</span>())</span></code></pre></div>
 <p><code>net</code> forests fit a lot faster than the original ORSF
 function in <code>obliqueRSF</code>. However, <code>net</code> forests
-are still much slower than <code>cph</code> ones:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a></span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co"># tracking how long it takes to fit 50 glmnet trees</span></span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="fu">print</span>(</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a> t1 <span class="ot">&lt;-</span> <span class="fu">system.time</span>(</span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="fu">orsf</span>(<span class="at">data =</span> pbc_orsf, </span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>       <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id, </span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>       <span class="at">control =</span> <span class="fu">orsf_control_net</span>(),</span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>       <span class="at">n_tree =</span> <span class="dv">50</span>)</span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a> )</span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>)</span>
-<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt;    user  system elapsed </span></span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt;     2.8     0.0     2.8</span></span>
-<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a></span>
-<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co"># and how long it takes to fit 50 cph trees</span></span>
-<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="fu">print</span>(</span>
-<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a> t2 <span class="ot">&lt;-</span> <span class="fu">system.time</span>(</span>
-<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>  <span class="fu">orsf</span>(<span class="at">data =</span> pbc_orsf, </span>
-<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>       <span class="at">formula =</span> <span class="fu">Surv</span>(time, status) <span class="sc">~</span> . <span class="sc">-</span> id, </span>
-<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>       <span class="at">control =</span> <span class="fu">orsf_control_cph</span>(),</span>
-<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>       <span class="at">n_tree =</span> <span class="dv">50</span>)</span>
-<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a> )</span>
-<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>)</span>
-<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co">#&gt;    user  system elapsed </span></span>
-<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a><span class="co">#&gt;    0.05    0.00    0.04</span></span>
-<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a></span>
-<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>t1[<span class="st">&#39;elapsed&#39;</span>] <span class="sc">/</span> t2[<span class="st">&#39;elapsed&#39;</span>]</span>
-<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="co">#&gt; elapsed </span></span>
-<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt;      70</span></span></code></pre></div>
+are still much slower than <code>cph</code> ones.</p>
 </div>
 <div id="aorsf-and-other-machine-learning-software" class="section level2">
 <h2>aorsf and other machine learning software</h2>
