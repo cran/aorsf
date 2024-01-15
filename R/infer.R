@@ -1,8 +1,15 @@
 
+#' null operator (copied from rlang)
+#' @noRd
+`%||%` <-  function (x, y) {
+ if (is.null(x))
+  y
+ else x
+}
 
-#' helper for guessing pred_horizon input
+#' helper for inferring pred_horizon input
 #'
-#' @param object 'orsf_fit' object
+#' @param object 'ObliqueForest' object
 #' @param pred_horizon NULL or a user's specified pred_horizon
 #'
 #' @return
@@ -14,9 +21,9 @@
 
 infer_pred_horizon <- function(object, pred_type, pred_horizon){
 
- check_arg_is(object, 'object', 'orsf_fit')
+ check_arg_is(object, 'object', 'ObliqueForest')
 
- if(pred_type %in% c("mort", "leaf")){
+ if(pred_type %in% c("mort", "leaf") || object$tree_type != 'survival'){
   # value of pred_horizon does not matter for these types of prediction
   pred_horizon <- 1
  }
@@ -36,7 +43,7 @@ infer_pred_horizon <- function(object, pred_type, pred_horizon){
 }
 
 
-#' helper for guessing outcome type
+#' helper for inferring outcome type
 #'
 #' @param names_y_data character vector of outcome names
 #' @param data dataset containing outcomes
@@ -45,13 +52,13 @@ infer_pred_horizon <- function(object, pred_type, pred_horizon){
 #'
 #' @examples
 #'
-#' infer_outcome_type('bili', pbc_orsf)
-#' infer_outcome_type('sex', pbc_orsf)
-#' infer_outcome_type(c('time', 'status'), pbc_orsf)
-#' infer_outcome_type(Surv(pbc_orsf$time, pbc_orsf$status), pbc_orsf)
+#' infer_tree_type('bili', pbc_orsf)
+#' infer_tree_type('sex', pbc_orsf)
+#' infer_tree_type(c('time', 'status'), pbc_orsf)
+#' infer_tree_type(Surv(pbc_orsf$time, pbc_orsf$status), pbc_orsf)
 #'
 #' @noRd
-infer_outcome_type <- function(names_y_data, data){
+infer_tree_type <- function(names_y_data, data){
 
  if(length(names_y_data) > 2){
   stop("formula should have at most two variables as the response",
@@ -69,7 +76,5 @@ infer_outcome_type <- function(names_y_data, data){
  } else {
   return("regression")
  }
-
- stop("could not infer outcome type", call. = FALSE)
 
 }

@@ -21,10 +21,10 @@ test_that(
   expect_error(orsf(pbc_orsf, Surv(time, status) ~ bili + id),
                'id variable?')
 
-  expect_error(orsf(pbc_orsf, Surv(time, not_right) ~ .),
+  expect_error(orsf(pbc_orsf, Surv(time, not_right) ~ . - id),
                'not_right')
 
-  expect_error(orsf(pbc_orsf, Surv(not_right, status) ~ .),
+  expect_error(orsf(pbc_orsf, Surv(not_right, status) ~ . - id),
                'not_right')
 
   expect_error(orsf(pbc_orsf, Surv(start, time, status) ~ .),
@@ -59,14 +59,14 @@ test_that(
 
    fit_long <- orsf(pbc_orsf,
                     formula = f_long,
-                    control = controls[[i]],
+                    control = controls_surv[[i]],
                     n_tree = n_tree_test,
                     tree_seeds = seeds_standard)
 
    # fits the orsf as expected
-   expect_s3_class(fit_long, 'orsf_fit')
+   expect_s3_class(fit_long, 'ObliqueForest')
    # keeps unique names
-   expect_equal(x_vars, get_names_x(fit_long))
+   expect_equal(x_vars, fit_long$get_names_x())
    # is the same forest as standard
    expect_equal_leaf_summary(fit_long, fit_standard_pbc[[i]])
 
@@ -83,18 +83,19 @@ test_that(
 
   pbc_surv_data <- cbind(pbc_orsf, surv_object = pbc_surv)
 
-  for(i in seq_along(controls)){
+  for(i in seq_along(controls_surv)){
+
    fit_surv <- orsf(
     pbc_surv_data,
     formula = surv_object ~ . - id - time - status,
     n_tree = n_tree_test,
-    control = controls[[i]],
+    control = controls_surv[[i]],
     tree_seed = seeds_standard
    )
 
    # name of surv object is correctly stored, values can be reproduced
    expect_equal(
-    pbc_surv_data[[get_names_y(fit_surv)]],
+    pbc_surv_data[[fit_surv$get_names_y()]],
     pbc_surv
    )
 
@@ -117,7 +118,7 @@ test_that(
 #    fit_status_modified <- orsf(pbc_orsf,
 #                                time + status ~ . - id,
 #                                n_tree = n_tree_test,
-#                                control = controls[[j]],
+#                                control = controls_surv[[j]],
 #                                tree_seeds = seeds_standard)
 #
 #    expect_equal_leaf_summary(fit_status_modified, fit_standard_pbc[[j]])

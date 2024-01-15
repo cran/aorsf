@@ -3,31 +3,32 @@
 \name{orsf}
 \alias{orsf}
 \alias{orsf_train}
-\title{Oblique Random Survival Forest (ORSF)}
+\title{Oblique Random Forests}
 \usage{
 orsf(
   data,
   formula,
-  control = orsf_control_fast(),
+  control = NULL,
   weights = NULL,
   n_tree = 500,
   n_split = 5,
   n_retry = 3,
-  n_thread = 1,
+  n_thread = 0,
   mtry = NULL,
   sample_with_replacement = TRUE,
   sample_fraction = 0.632,
   leaf_min_events = 1,
   leaf_min_obs = 5,
-  split_rule = "logrank",
+  split_rule = NULL,
   split_min_events = 5,
   split_min_obs = 10,
-  split_min_stat = switch(split_rule, logrank = 3.841459, cstat = 0.5),
-  oobag_pred_type = "surv",
+  split_min_stat = NULL,
+  oobag_pred_type = NULL,
   oobag_pred_horizon = NULL,
-  oobag_eval_every = n_tree,
+  oobag_eval_every = NULL,
   oobag_fun = NULL,
   importance = "anova",
+  importance_max_pvalue = 0.01,
   group_factors = TRUE,
   tree_seeds = NULL,
   attach_data = TRUE,
@@ -37,39 +38,44 @@ orsf(
   ...
 )
 
-orsf_train(object)
+orsf_train(object, attach_data = TRUE)
 }
 \arguments{
 \item{data}{a \link{data.frame}, \link[tibble:tibble-package]{tibble}, or \link[data.table:data.table]{data.table} that contains the
 relevant variables.}
 
-\item{formula}{(\emph{formula}) The response on the left hand side should
-include a time variable, followed by a status variable, and may be
-written inside a call to \link[survival:Surv]{Surv} (see examples).
-The terms on the right are names of predictor variables.}
-
-\item{control}{(\emph{orsf_control}) An object returned from one of the
-\code{orsf_control} functions:
+\item{formula}{(\emph{formula}) Two sided formula with a single outcome.
+The terms on the right are names of predictor variables, and the
+symbol '.' may be used to indicate all variables in the data
+except the response. The symbol '-' may also be used to indicate
+removal of a predictor. Details on the response vary depending
+on forest type:
 \itemize{
-\item \link{orsf_control_fast} (the default) uses a single iteration of Newton
-Raphson scoring to identify a linear combination of predictors.
-\item \link{orsf_control_cph} uses Newton Raphson scoring until a convergence
-criteria is met.
-\item \link{orsf_control_net} uses \code{glmnet} to identify linear combinations of
-predictors, similar to Jaeger (2019).
-\item \link{orsf_control_custom} allows the user to apply their own function
-to create linear combinations of predictors.
+\item \emph{Classification}: The response should be a single variable,
+and that variable should have type \code{factor} in \code{data}.
+\item \emph{Regression}: The response should be a single variable, and
+that variable should have typee \code{double} or \code{integer} with at
+least 10 unique numeric values in \code{data}.
+\item \emph{Survival}: The response should include a time variable,
+followed by a status variable, and may be written inside a
+call to \link[survival:Surv]{Surv} (see examples).
 }}
 
-\item{weights}{(\emph{numeric vector}) Optional. If given, this input should
-have length equal to \code{nrow(data)}. Values in \code{weights} are treated like
-replication weights, i.e., a value of 2 is the same thing as having 2
-observations in \code{data}, each containing a copy of the corresponding
-person's data.
+\item{control}{(\emph{orsf_control}) An object returned from one of the
+\code{orsf_control} functions: \link{orsf_control_survival},
+\link{orsf_control_classification}, and \link{orsf_control_regression}. If
+\code{NULL} (the default) will use an accelerated control, which is the
+fastest available option. For survival and classification, this is
+Cox and Logistic regression with 1 iteration, and for regression
+it is ordinary least squares.}
 
-\emph{Use} \code{weights} \emph{cautiously}, as \code{orsf} will count the number of
-observations and events prior to growing a node for a tree, so higher
-values in \code{weights} will lead to deeper trees.}
+\item{weights}{(\emph{numeric vector}) Optional. If given, this input should
+have length equal to \code{nrow(data)} for complete or imputed data and should
+have length equal to \code{nrow(na.omit(data))} if \code{na_action} is \code{"omit"}.
+As the weights vector is used to count observations and events prior to
+growing a node for a tree, \code{orsf()} scales \code{weights} so that
+\code{sum(weights) == nrow(data)}. This helps to make tree depth consistent
+between weighted and un-weighted fits.}
 
 \item{n_tree}{(\emph{integer}) the number of trees to grow.
 Default is \code{n_tree = 500.}}
@@ -77,13 +83,13 @@ Default is \code{n_tree = 500.}}
 \item{n_split}{(\emph{integer}) the number of cut-points assessed when splitting
 a node in decision trees. Default is \code{n_split = 5}.}
 
-\item{n_retry}{(\emph{integer}) when a node can be split, but the current
+\item{n_retry}{(\emph{integer}) when a node is splittable, but the current
 linear combination of inputs is unable to provide a valid split, \code{orsf}
 will try again with a new linear combination based on a different set
 of randomly selected predictors, up to \code{n_retry} times. Default is
 \code{n_retry = 3}. Set \code{n_retry = 0} to prevent any retries.}
 
-\item{n_thread}{(\emph{integer}) number of threads to use while growing trees, computing predictions, and computing importance. Default is one thread. To use the maximum number of threads that your system provides for concurrent execution, set \code{n_thread = 0}.}
+\item{n_thread}{(\emph{integer}) number of threads to use while growing trees, computing predictions, and computing importance. Default is 0, which allows a suitable number of threads to be used based on availability.}
 
 \item{mtry}{(\emph{integer}) Number of predictors randomly included as candidates
 for splitting a node. The default is the smallest integer greater than
@@ -101,46 +107,94 @@ each trees' in-bag sample will contain, relative to the number of
 rows in \code{data}. Only used if \code{sample_with_replacement} is \code{FALSE}.
 Default value is 0.632.}
 
-\item{leaf_min_events}{(\emph{integer}) minimum number of events in a
+\item{leaf_min_events}{(\emph{integer}) This input is only relevant for
+survival analysis, and specifies the minimum number of events in a
 leaf node. Default is \code{leaf_min_events = 1}}
 
 \item{leaf_min_obs}{(\emph{integer}) minimum number of observations in a
 leaf node. Default is \code{leaf_min_obs = 5}.}
 
 \item{split_rule}{(\emph{character}) how to assess the quality of a potential
-splitting rule for a node. Valid options are
+splitting rule for a node. Valid options for survival are:
 \itemize{
-\item 'logrank' : a log-rank test statistic.
+\item 'logrank' : a log-rank test statistic (default).
 \item 'cstat'   : Harrell's concordance statistic.
+}
+
+For classification, valid options are:
+\itemize{
+\item 'gini'  : gini impurity (default)
+\item 'cstat' : area underneath the ROC curve (AUC-ROC)
+}
+
+For regression, valid options are:
+\itemize{
+\item 'variance' : variance reduction (default)
 }}
 
 \item{split_min_events}{(\emph{integer}) minimum number of events required
-in a node to consider splitting it. Default is \code{split_min_events = 5}}
+in a node to consider splitting it. Default is \code{split_min_events = 5}.
+This input is only relevant for survival trees.}
 
 \item{split_min_obs}{(\emph{integer}) minimum number of observations required
 in a node to consider splitting it. Default is \code{split_min_obs = 10}.}
 
 \item{split_min_stat}{(double) minimum test statistic required to split
-a node. Default is 3.841459 if \code{split_rule = 'logrank'} and 0.50 if
-\code{split_rule = 'cstat'}. If no splits are found with a statistic
-exceeding \code{split_min_stat}, the given node either becomes a leaf or
-a retry occurs (up to \code{n_retry} retries).}
+a node. If no splits are found with a statistic exceeding \code{split_min_stat},
+the given node either becomes a leaf or a retry occurs (up to \code{n_retry}
+retries). Defaults are
+\itemize{
+\item 3.84 if \code{split_rule = 'logrank'}
+\item 0.55 if \code{split_rule = 'cstat'} (see first note below)
+\item 0.00 if \code{split_rule = 'gini'} (see second note below)
+\item 0.00 if \code{split_rule = 'variance'}
+}
+
+\strong{Note 1} For C-statistic splitting, if C is < 0.50, we consider the statistic
+value to be 1 - C to allow for good 'anti-predictive' splits. So,
+if a C-statistic is initially computed as 0.1, it will be considered
+as 1 - 0.10 = 0.90.
+
+\strong{Note 2} For Gini impurity, a value of 0 and 1 usually indicate the best and
+worst possible scores, respectively. To make things simple and to avoid
+introducing a \code{split_max_stat} input, we flip the values of Gini
+impurity so that 1 and 0 indicate the best and worst possible scores,
+respectively.}
 
 \item{oobag_pred_type}{(\emph{character}) The type of out-of-bag predictions
-to compute while fitting the ensemble. Valid options are
+to compute while fitting the ensemble. Valid options for any tree type:
 \itemize{
 \item 'none' : don't compute out-of-bag predictions
-\item 'risk' : probability of event occurring at or before \code{oobag_pred_horizon}.
+\item 'leaf' : the ID of the predicted leaf is returned for each tree
+}
+
+Valid options for survival:
+\itemize{
+\item 'risk' : probability of event occurring at or before
+\code{oobag_pred_horizon} (default).
 \item 'surv' : 1 - risk.
 \item 'chf'  : cumulative hazard function at \code{oobag_pred_horizon}.
 \item 'mort' : mortality, i.e., the number of events expected if all
 observations in the training data were identical to a
 given observation.
+}
+
+Valid options for classification:
+\itemize{
+\item 'prob'  : probability of each class (default)
+\item 'class' : class (i.e., which.max(prob))
+}
+
+Valid options for regression:
+\itemize{
+\item 'mean' : mean value (default)
 }}
 
 \item{oobag_pred_horizon}{(\emph{numeric}) A numeric value indicating what time
 should be used for out-of-bag predictions. Default is the median
-of the observed times, i.e., \code{oobag_pred_horizon = median(time)}.}
+of the observed times, i.e., \code{oobag_pred_horizon = median(time)}.
+This input is only relevant for survival trees that have prediction
+type of 'risk', 'surv', or 'chf'.}
 
 \item{oobag_eval_every}{(\emph{integer}) The out-of-bag performance of the
 ensemble will be checked every \code{oobag_eval_every} trees. So, if
@@ -149,11 +203,18 @@ after growing the 10th tree, the 20th tree, and so on. Default
 is \code{oobag_eval_every = n_tree}.}
 
 \item{oobag_fun}{(\emph{function}) to be used for evaluating out-of-bag prediction accuracy every \code{oobag_eval_every}
-trees. When \code{oobag_fun = NULL} (the default), Harrell's C-statistic (1982) is used to evaluate accuracy. if you use your own \code{oobag_fun} note the following:
+trees. When \code{oobag_fun = NULL} (the default), the evaluation statistic is selected based on tree type
 \itemize{
-\item \code{oobag_fun} should have two inputs: \code{y_mat} and \code{s_vec}
-\item \code{y_mat} is a two column matrix with first column named 'time', second named 'status'
-\item \code{s_vec} is a numeric vector containing predicted survival probabilities.
+\item survival: Harrell's C-statistic (1982)
+\item classification: Area underneath the ROC curve (AUC-ROC)
+\item regression: Traditional prediction R-squared
+}
+
+if you use your own \code{oobag_fun} note the following:
+\itemize{
+\item \code{oobag_fun} should have three inputs: \code{y_mat}, \code{w_vec}, and \code{s_vec}
+\item For survival trees, \code{y_mat} should be a two column matrix with first column named 'time' and second named 'status'. For classification trees, \code{y_mat} should be a matrix with number of columns = number of distinct classes in the outcome. For regression, \code{y_mat} should be a matrix with one column.
+\item \code{s_vec} is a numeric vector containing predictions
 \item \code{oobag_fun} should return a numeric output of length 1
 }
 
@@ -169,6 +230,12 @@ For more details, see the out-of-bag \href{https://docs.ropensci.org/aorsf/artic
 
 For details on these methods, see \link{orsf_vi}.}
 
+\item{importance_max_pvalue}{(\emph{double}) Only relevant if \code{importance}
+is \code{"anova"}. The maximum p-value that will register as a positive
+case when counting the number of times a variable was found to be
+'significant' during tree growth. Default is 0.01, as recommended
+by Menze et al.}
+
 \item{group_factors}{(\emph{logical}) Only relevant if variable importance is
 being estimated. if \code{TRUE}, the importance of factor variables will be reported overall by aggregating the importance of individual levels of the factor. If \code{FALSE}, the importance of individual factor levels will be returned.}
 
@@ -177,10 +244,10 @@ will be set using the values in \code{tree_seeds[i]}  before growing tree \code{
 Two forests grown with the same number of trees and the same seeds will
 have the exact same out-of-bag samples, making out-of-bag error
 estimates of the forests more comparable. If \code{NULL} (the default),
-no seeds are set during the training process.}
+seeds are picked at random.}
 
 \item{attach_data}{(\emph{logical}) if \code{TRUE}, a copy of the training
-data will be attached to the output. This is helpful if you
+data will be attached to the output. This is required if you
 plan on using functions like \link{orsf_pd_oob} or \link{orsf_summarize_uni}
 to interpret the forest using its training data. Default is \code{TRUE}.}
 
@@ -192,9 +259,7 @@ directly submitted to \code{orsf_train()} so long as \code{attach_data} is \code
 \itemize{
 \item 'fail' : an error is thrown if \code{data} contains \code{NA} values
 \item 'omit' : rows in \code{data} with incomplete data will be dropped
-\item 'impute_meanmode' : missing values for continuous and categorical variables in \code{data} will be imputed using the mean and mode, respectively. Note that is this
-option is selected and \code{attach_data} is \code{TRUE}, the data attached
-to the output will be the imputed version of \code{data}.
+\item 'impute_meanmode' : missing values for continuous and categorical variables in \code{data} will be imputed using the mean and mode, respectively.
 }}
 
 \item{verbose_progress}{(\emph{logical}) if \code{TRUE}, progress messages are
@@ -206,55 +271,35 @@ printed in the console. If \code{FALSE} (the default), nothing is printed.}
 \code{no_fit = TRUE} in \code{orsf()}.}
 }
 \value{
-an accelerated oblique RSF object (\code{aorsf})
+an \emph{obliqueForest} object
 }
 \description{
-Fit an oblique random survival forest
+Grow or specify an oblique random forest. While the name \code{orsf()}
+implies that this function only works for survival forests,
+it can be used for classification, regression, or survival
+forests.
 }
 \details{
-This function is based on and similar to the \code{ORSF} function
-in the \code{obliqueRSF} R package. The primary difference is that this
-function runs much faster. The speed increase is attributable to better
-management of memory (i.e., no unnecessary copies of inputs) and using
-a Newton Raphson scoring algorithm to identify linear combinations of
-inputs rather than performing penalized regression using routines in
-\code{glmnet}.The modified Newton Raphson scoring algorithm that this
-function applies is an adaptation of the C++ routine developed by
-Terry M. Therneau that fits Cox proportional hazards models
-(see \code{\link[survival:coxph]{survival::coxph()}} and more specifically \code{\link[survival:agreg.fit]{survival::coxph.fit()}}).
-}
-\section{Details on inputs}{
+Why isn't this function called \code{orf()}? In its earlier versions, the
+\code{aorsf} package was exclusively for \emph{o}blique \emph{r}andom \emph{s}urvival \emph{f}orests.
 
-
-\strong{formula}:
+\strong{formula for survival oblique RFs}:
 \itemize{
 \item The response in \code{formula} can be a survival
 object as returned by the \link[survival:Surv]{Surv} function,
 but can also just be the time and status variables. I.e.,
-\code{Surv(time, status) ~ .} works just like \code{time + status ~ .}
-\item A \code{.} symbol on the right hand side is short-hand for using all
-variables in \code{data} (omitting those on the left hand side of
-\code{formula}) as predictors.
-\item The order of variables in the left hand side matters. i.e.,
-writing \code{status + time ~ .} will make \code{orsf} assume your
-\code{status} variable is actually the \code{time} variable.
-\item The response variable can be a survival object stored in \code{data}.
-For example, y ~ . is a valid formula if \code{data$y} inherits
+\code{Surv(time, status) ~ .} works and \code{time + status ~ .} works
+\item The response can also be a survival object stored in \code{data}.
+For example, \code{y ~ .} is a valid formula if \code{data$y} inherits
 from the \code{Surv} class.
-\item Although you can fit an oblique random survival forest with 1 predictor
-variable, your formula should have at least 2 predictors. The reason for
-this recommendation is that a linear combination of predictors is trivial
-if there is only one predictor.
 }
 
 \strong{mtry}:
 
-The \code{mtry} parameter may be temporarily reduced to ensure there
-are at least 2 events per predictor variable. This occurs when using
-\link{orsf_control_cph} because coefficients in the Newton Raphson scoring
-algorithm may become unstable when the number of covariates is
-greater than or equal to the number of events. This reduction does not
-occur when using \link{orsf_control_net}.
+The \code{mtry} parameter may be temporarily reduced to ensure that linear
+models used to find combinations of predictors remain stable. This occurs
+because coefficients in linear model fitting algorithms may become infinite
+if the number of predictors exceeds the number of observations.
 
 \strong{oobag_fun}:
 
@@ -264,12 +309,11 @@ for ANOVA importance.
 
 \strong{n_thread}:
 
-If an R function must be called from C++ (i.e., user-supplied function to
+If an R function is to be called from C++ (i.e., user-supplied function to
 compute out-of-bag error or identify linear combinations of variables),
 \code{n_thread} will automatically be set to 1 because attempting to run R
 functions in multiple threads will cause the R session to crash.
 }
-
 \section{What is an oblique decision tree?}{
 
 
@@ -317,607 +361,258 @@ random forest's predictions when it is applied to predict outcomes for
 data that were not used to train it, i.e., testing data.
 }
 
-\section{Missing data}{
-
-
-Data passed to aorsf functions are not allowed to have missing values.
-A user should impute missing values using an R package with that purpose,
-such as \code{recipes} or \code{mlr3pipelines}.
-}
-
 \section{Examples}{
-First we load some relevant packages
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{set.seed(329730)
-suppressPackageStartupMessages(\{
- library(aorsf)
- library(survival)
- library(tidymodels)
- library(tidyverse)
- library(randomForestSRC)
- library(ranger)
- library(riskRegression) 
- library(obliqueRSF)
-\})
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(aorsf)
+library(magrittr) # for \%>\%
 }\if{html}{\out{</div>}}
 
-The entry-point into \code{aorsf} is the standard call to \code{orsf()}:
+\code{orsf()} is the entry-point of the \code{aorsf} package. It can be used to
+fit classification, regression, and survival forests.
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit <- orsf(pbc_orsf, Surv(time, status) ~ . - id)
+For classification, we fit an oblique RF to predict penguin species
+using \code{penguin} data from the magnificent \code{palmerpenguins} \href{https://allisonhorst.github.io/palmerpenguins/}{R package}
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# An oblique classification RF
+penguin_fit <- orsf(data = penguins_orsf,
+                    n_tree = 5, 
+                    formula = species ~ .)
+
+penguin_fit
 }\if{html}{\out{</div>}}
 
-printing \code{fit} provides quick descriptive summaries:
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## ---------- Oblique random classification forest
+## 
+##      Linear combinations: Accelerated Logistic regression
+##           N observations: 333
+##                N classes: 3
+##                  N trees: 5
+##       N predictors total: 7
+##    N predictors per node: 3
+##  Average leaves per tree: 5.6
+## Min observations in leaf: 5
+##           OOB stat value: 0.99
+##            OOB stat type: AUC-ROC
+##      Variable importance: anova
+## 
+## -----------------------------------------
+}\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit
+For regression, we use the same data but predict bill length of
+penguins:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# An oblique regression RF
+bill_fit <- orsf(data = penguins_orsf, 
+                 n_tree = 5, 
+                 formula = bill_length_mm ~ .)
+
+bill_fit
+}\if{html}{\out{</div>}}
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## ---------- Oblique random regression forest
+## 
+##      Linear combinations: Accelerated Linear regression
+##           N observations: 333
+##                  N trees: 5
+##       N predictors total: 7
+##    N predictors per node: 3
+##  Average leaves per tree: 50.4
+## Min observations in leaf: 5
+##           OOB stat value: 0.72
+##            OOB stat type: RSQ
+##      Variable importance: anova
+## 
+## -----------------------------------------
+}\if{html}{\out{</div>}}
+
+My personal favorite is the oblique survival RF with accelerated Cox
+regression because it was the first type of oblique RF that \code{aorsf}
+provided (see \href{https://arxiv.org/abs/2208.01129}{ArXiv paper}; the paper
+is also published in \emph{Journal of Computational and Graphical Statistics}
+but is not publicly available there). Here, we use it to predict
+mortality risk following diagnosis of primary biliary cirrhosis:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# An oblique survival RF
+pbc_fit <- orsf(data = pbc_orsf, 
+                n_tree = 5,
+                formula = Surv(time, status) ~ . - id)
+
+pbc_fit
 }\if{html}{\out{</div>}}
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{## ---------- Oblique random survival forest
 ## 
-##      Linear combinations: Accelerated
+##      Linear combinations: Accelerated Cox regression
+##           N observations: 276
+##                 N events: 111
+##                  N trees: 5
+##       N predictors total: 17
+##    N predictors per node: 5
+##  Average leaves per tree: 21.4
+## Min observations in leaf: 5
+##       Min events in leaf: 1
+##           OOB stat value: 0.75
+##            OOB stat type: Harrell's C-index
+##      Variable importance: anova
+## 
+## -----------------------------------------
+}\if{html}{\out{</div>}}
+\subsection{More than one way to grow a forest}{
+
+You can use \code{orsf(no_fit = TRUE)} to make a \emph{specification} to grow a
+forest instead of a fitted forest.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{orsf_spec <- orsf(pbc_orsf, 
+                  formula = time + status ~ . - id,
+                  no_fit = TRUE)
+
+orsf_spec
+}\if{html}{\out{</div>}}
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## Untrained oblique random survival forest
+## 
+##      Linear combinations: Accelerated Cox regression
 ##           N observations: 276
 ##                 N events: 111
 ##                  N trees: 500
 ##       N predictors total: 17
 ##    N predictors per node: 5
-##  Average leaves per tree: 21
+##  Average leaves per tree: 0
 ## Min observations in leaf: 5
 ##       Min events in leaf: 1
-##           OOB stat value: 0.84
-##            OOB stat type: Harrell's C-statistic
+##           OOB stat value: none
+##            OOB stat type: Harrell's C-index
 ##      Variable importance: anova
 ## 
 ## -----------------------------------------
 }\if{html}{\out{</div>}}
-\subsection{Model control}{
 
-For these examples we will make use of the \code{orsf_control_} functions to
-build and compare models based on their out-of-bag predictions. We will
-also standardize the out-of-bag samples using the input argument
-\code{tree_seeds}
-\subsection{Accelerated linear combinations}{
-
-The accelerated ORSF ensemble is the default because it has a nice
-balance of computational speed and prediction accuracy. It runs a single
-iteration of Newton Raphson scoring on the Cox partial likelihood
-function to find linear combinations of predictors.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit_accel <- orsf(pbc_orsf, 
-                  control = orsf_control_fast(),
-                  formula = Surv(time, status) ~ . - id,
-                  tree_seeds = 329)
-}\if{html}{\out{</div>}}
+Why would you do this? Two reasons:
+\enumerate{
+\item For very computational tasks, you may want to check how long it will
+take to fit the forest before you commit to it:
 }
 
-\subsection{Linear combinations with Cox regression}{
-
-\code{orsf_control_cph} runs Cox regression in each non-terminal node of each
-survival tree, using the regression coefficients to create linear
-combinations of predictors:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit_cph <- orsf(pbc_orsf, 
-                control = orsf_control_cph(),
-                formula = Surv(time, status) ~ . - id,
-                tree_seeds = 329)
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{orsf_spec \%>\% 
+ orsf_update(n_tree = 10000) \%>\%
+ orsf_time_to_train()
 }\if{html}{\out{</div>}}
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## Time difference of 2.426429 secs
+}\if{html}{\out{</div>}}
+\enumerate{
+\item If fitting multiple forests, use the blueprint along with
+\code{orsf_train()} and \code{orsf_update()} to simplify your code:
 }
 
-\subsection{Linear combinations with penalized cox regression}{
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{orsf_fit <- orsf_train(orsf_spec)
+orsf_fit_10 <- orsf_update(orsf_fit, leaf_min_obs = 10)
+orsf_fit_20 <- orsf_update(orsf_fit, leaf_min_obs = 20)
 
-\code{orsf_control_net} runs penalized Cox regression in each non-terminal
-node of each survival tree, using the regression coefficients to create
-linear combinations of predictors. This can be really helpful if you
-want to do feature selection within the node, but it is a lot slower
-than the other options.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# select 3 predictors out of 5 to be used in
-# each linear combination of predictors.
-fit_net <- orsf(pbc_orsf, 
-                control = orsf_control_net(df_target = 3),
-                formula = Surv(time, status) ~ . - id,
-                tree_seeds = 329)
-}\if{html}{\out{</div>}}
-}
-
-\subsection{Linear combinations with your own function}{
-
-Let’s make two customized functions to identify linear combinations of
-predictors.
-\itemize{
-\item The first uses random coefficients
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{f_rando <- function(x_node, y_node, w_node)\{
- matrix(runif(ncol(x_node)), ncol=1) 
-\}
-}\if{html}{\out{</div>}}
-\item The second derives coefficients from principal component analysis.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{f_pca <- function(x_node, y_node, w_node) \{ 
-
- # estimate two principal components.
- pca <- stats::prcomp(x_node, rank. = 2)
- # use the second principal component to split the node
- pca$rotation[, 1L, drop = FALSE]
-
-\}
-}\if{html}{\out{</div>}}
-\item The third uses \code{orsf()} inside of \code{orsf()}.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# This approach is known as reinforcement learning trees.  
-# some special care is taken to prevent your R session from crashing.
-# Specifically, random coefficients are used when n_obs <= 10
-# or n_events <= 5. 
-
-f_aorsf <- function(x_node, y_node, w_node)\{
-
- colnames(y_node) <- c('time', 'status')
- colnames(x_node) <- paste("x", seq(ncol(x_node)), sep = '')
-
- data <- as.data.frame(cbind(y_node, x_node))
-
- if(nrow(data) <= 10 || sum(y_node[,'status']) <= 5) 
-  return(matrix(runif(ncol(x_node)), ncol = 1))
-
- fit <- orsf(data, time + status ~ ., 
-             weights = as.numeric(w_node),
-             n_tree = 25,
-             importance = 'permute')
-
- out <- orsf_vi(fit)
-
- # drop the least two important variables
- n_vars <- length(out)
- out[c(n_vars, n_vars-1)] <- 0
-
- # ensure out has same variable order as input
- out <- out[colnames(x_node)]
-
- matrix(out, ncol = 1)
-
-\}
-}\if{html}{\out{</div>}}
-}
-
-We can plug these functions into \code{orsf_control_custom()}, and then pass
-the result into \code{orsf()}:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit_rando <- orsf(pbc_orsf,
-                  Surv(time, status) ~ . - id,
-                  control = orsf_control_custom(beta_fun = f_rando),
-                  tree_seeds = 329)
-
-fit_pca <- orsf(pbc_orsf,
-                Surv(time, status) ~ . - id,
-                control = orsf_control_custom(beta_fun = f_pca),
-                tree_seeds = 329)
-
-fit_rlt <- orsf(pbc_orsf, time + status ~ . - id, 
-                control = orsf_control_custom(beta_fun = f_aorsf),
-                tree_seeds = 329)
+orsf_fit$leaf_min_obs
 }\if{html}{\out{</div>}}
 
-So which fit seems to work best in this example? Let’s find out by
-evaluating the out-of-bag survival predictions.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{risk_preds <- list(
- accel = 1 - fit_accel$pred_oobag,
- cph   = 1 - fit_cph$pred_oobag,
- net   = 1 - fit_net$pred_oobag,
- rando = 1 - fit_rando$pred_oobag,
- pca   = 1 - fit_pca$pred_oobag,
- rlt   = 1 - fit_rlt$pred_oobag
-)
-
-sc <- Score(object = risk_preds, 
-            formula = Surv(time, status) ~ 1, 
-            data = pbc_orsf, 
-            summary = 'IPA',
-            times = fit_accel$pred_horizon)
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## [1] 5
 }\if{html}{\out{</div>}}
 
-The AUC values, from highest to lowest:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{sc$AUC$score[order(-AUC)]
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{orsf_fit_10$leaf_min_obs
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##    model times       AUC         se     lower     upper
-## 1:   net  1788 0.9134593 0.02079935 0.8726933 0.9542253
-## 2: accel  1788 0.9112315 0.02098077 0.8701099 0.9523530
-## 3:   rlt  1788 0.9076685 0.02078732 0.8669261 0.9484109
-## 4:   cph  1788 0.9063871 0.02165434 0.8639453 0.9488288
-## 5: rando  1788 0.9023489 0.02218936 0.8588586 0.9458393
-## 6:   pca  1788 0.8994220 0.02201713 0.8562692 0.9425748
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## [1] 10
 }\if{html}{\out{</div>}}
 
-And the indices of prediction accuracy:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{sc$Brier$score[order(-IPA), .(model, times, IPA)]
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{orsf_fit_20$leaf_min_obs
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##         model times       IPA
-## 1:        net  1788 0.4916038
-## 2:      accel  1788 0.4879683
-## 3:        cph  1788 0.4751883
-## 4:        rlt  1788 0.4570179
-## 5:        pca  1788 0.4370592
-## 6:      rando  1788 0.4258344
-## 7: Null model  1788 0.0000000
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## [1] 20
 }\if{html}{\out{</div>}}
-
-From inspection,
-\itemize{
-\item \code{net}, \code{accel}, and \code{rlt} have high discrimination and index of
-prediction accuracy.
-\item \code{rando} and \code{pca} do less well, but they aren’t bad.
-}
-}
-
 }
 
 \subsection{tidymodels}{
 
-This example uses \code{tidymodels} functions but stops short of using an
-official \code{tidymodels} workflow. I am working on getting \code{aorsf} pulled
-into the \code{censored} package and I will update this with real workflows
-if that happens!
-\subsection{Comparing ORSF with other learners}{
+\code{tidymodels} includes support for \code{aorsf} as a computational engine:
 
-Start with a recipe to pre-process data
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(tidymodels)
+library(censored)
+library(yardstick)
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{imputer <- recipe(pbc_orsf, formula = time + status ~ .) \%>\% 
- step_impute_mean(all_numeric_predictors()) \%>\%
- step_impute_mode(all_nominal_predictors()) 
+pbc_tidy <- pbc_orsf \%>\% 
+ mutate(event_time = Surv(time, status), .before = 1) \%>\% 
+ select(-c(id, time, status)) \%>\% 
+ as_tibble()
+
+split  <- initial_split(pbc_tidy)
+
+orsf_spec <- rand_forest() \%>\% 
+ set_engine("aorsf") \%>\% 
+ set_mode("censored regression")
+
+orsf_fit <- fit(orsf_spec, 
+                formula = event_time ~ ., 
+                data = training(split))
 }\if{html}{\out{</div>}}
 
-Next create a 10-fold cross validation object and pre-process the data:
+Prediction with \code{aorsf} models at different times is also supported:
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# 10-fold cross validation; make a container for the pre-processed data
-analyses <- vfold_cv(data = pbc_orsf, v = 10) \%>\%
- mutate(recipe = map(splits, ~prep(imputer, training = training(.x))),
-        train = map(recipe, juice),
-        test = map2(splits, recipe, ~bake(.y, new_data = testing(.x))))
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{time_points <- seq(500, 3000, by = 500)
 
-analyses
+test_pred <- augment(orsf_fit, 
+                     new_data = testing(split), 
+                     eval_time = time_points)
+
+brier_scores <- test_pred \%>\% 
+  brier_survival(truth = event_time, .pred)
+
+brier_scores
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{## #  10-fold cross-validation 
-## # A tibble: 10 x 5
-##    splits           id     recipe   train               test              
-##    <list>           <chr>  <list>   <list>              <list>            
-##  1 <split [248/28]> Fold01 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
-##  2 <split [248/28]> Fold02 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
-##  3 <split [248/28]> Fold03 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
-##  4 <split [248/28]> Fold04 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
-##  5 <split [248/28]> Fold05 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
-##  6 <split [248/28]> Fold06 <recipe> <tibble [248 x 20]> <tibble [28 x 20]>
-##  7 <split [249/27]> Fold07 <recipe> <tibble [249 x 20]> <tibble [27 x 20]>
-##  8 <split [249/27]> Fold08 <recipe> <tibble [249 x 20]> <tibble [27 x 20]>
-##  9 <split [249/27]> Fold09 <recipe> <tibble [249 x 20]> <tibble [27 x 20]>
-## 10 <split [249/27]> Fold10 <recipe> <tibble [249 x 20]> <tibble [27 x 20]>
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## # A tibble: 6 x 4
+##   .metric        .estimator .eval_time .estimate
+##   <chr>          <chr>           <dbl>     <dbl>
+## 1 brier_survival standard          500    0.0275
+## 2 brier_survival standard         1000    0.0658
+## 3 brier_survival standard         1500    0.0480
+## 4 brier_survival standard         2000    0.0623
+## 5 brier_survival standard         2500    0.138 
+## 6 brier_survival standard         3000    0.146
 }\if{html}{\out{</div>}}
 
-Define functions for a ‘workflow’ with \code{randomForestSRC}, \code{ranger}, and
-\code{aorsf}.
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{roc_scores <- test_pred \%>\% 
+  roc_auc_survival(truth = event_time, .pred)
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{rfsrc_wf <- function(train, test, pred_horizon)\{
- 
- # rfsrc does not like tibbles, so cast input data into data.frames
- train <- as.data.frame(train)
- test <- as.data.frame(test)
- 
- rfsrc(formula = Surv(time, status) ~ ., data = train) \%>\% 
-  predictRisk(newdata = test, times = pred_horizon) \%>\% 
-  as.numeric()
- 
-\}
-
-ranger_wf <- function(train, test, pred_horizon)\{
- 
- ranger(Surv(time, status) ~ ., data = train) \%>\% 
-  predictRisk(newdata = test, times = pred_horizon) \%>\% 
-  as.numeric()
- 
-\}
-
-aorsf_wf <- function(train, test, pred_horizon)\{
- 
- train \%>\% 
-  orsf(Surv(time, status) ~ .,) \%>\% 
-  predict(new_data = test, pred_horizon = pred_horizon) \%>\% 
-  as.numeric()
- 
-\}
+roc_scores
 }\if{html}{\out{</div>}}
 
-Run the ‘workflows’ on each fold:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# 5 year risk prediction
-ph <- 365.25 * 5
-
-results <- analyses \%>\% 
- transmute(test, 
-           pred_aorsf = map2(train, test, aorsf_wf, pred_horizon = ph),
-           pred_rfsrc = map2(train, test, rfsrc_wf, pred_horizon = ph),
-           pred_ranger = map2(train, test, ranger_wf, pred_horizon = ph))
+\if{html}{\out{<div class="sourceCode">}}\preformatted{## # A tibble: 6 x 4
+##   .metric          .estimator .eval_time .estimate
+##   <chr>            <chr>           <dbl>     <dbl>
+## 1 roc_auc_survival standard          500     0.988
+## 2 roc_auc_survival standard         1000     0.959
+## 3 roc_auc_survival standard         1500     0.992
+## 4 roc_auc_survival standard         2000     0.987
+## 5 roc_auc_survival standard         2500     0.908
+## 6 roc_auc_survival standard         3000     0.909
 }\if{html}{\out{</div>}}
-
-Next unnest each column to get back a \code{tibble} with all of the testing
-data and predictions.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{results <- results \%>\% 
- unnest(everything())
-
-glimpse(results)
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{## Rows: 276
-## Columns: 23
-## $ id          <int> 20, 47, 55, 57, 63, 65, 83, 121, 141, 181, 197, 201, 202, ~
-## $ trt         <fct> placebo, placebo, d_penicill_main, d_penicill_main, placeb~
-## $ age         <dbl> 59.95346, 47.42779, 65.76318, 53.57153, 46.62834, 40.20260~
-## $ sex         <fct> f, f, m, f, f, f, f, m, f, f, f, f, f, f, m, f, m, f, f, f~
-## $ ascites     <fct> 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0~
-## $ hepato      <fct> 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1~
-## $ spiders     <fct> 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1~
-## $ edema       <fct> 0, 0, 0, 0.5, 1, 0, 0.5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ~
-## $ bili        <dbl> 5.1, 0.5, 1.8, 2.3, 22.5, 1.2, 1.3, 1.3, 0.9, 1.4, 0.6, 0.~
-## $ chol        <int> 374, 316, 416, 260, 932, 256, 250, 151, 346, 248, 266, 235~
-## $ albumin     <dbl> 3.51, 3.65, 3.94, 3.18, 3.12, 3.60, 3.50, 3.08, 3.77, 3.58~
-## $ copper      <int> 140, 68, 121, 231, 95, 74, 48, 73, 59, 63, 25, 26, 15, 12,~
-## $ alk.phos    <dbl> 1919.0, 1716.0, 10165.0, 11320.2, 5396.0, 724.0, 1138.0, 1~
-## $ ast         <dbl> 122.45, 187.55, 79.98, 105.78, 244.90, 141.05, 71.30, 46.5~
-## $ trig        <int> 135, 71, 219, 94, 133, 108, 100, 49, 56, 106, 102, 67, 89,~
-## $ platelet    <int> 322, 356, 213, 216, 165, 430, 81, 213, 336, 79, 201, 228, ~
-## $ protime     <dbl> 13.0, 9.8, 11.0, 12.4, 11.6, 10.0, 12.9, 13.2, 10.6, 10.3,~
-## $ stage       <ord> 4, 3, 3, 3, 3, 1, 4, 4, 2, 4, 2, 4, 2, 1, 2, 3, 2, 4, 3, 4~
-## $ time        <int> 1356, 2576, 1360, 3282, 859, 3992, 4050, 191, 3050, 2556, ~
-## $ status      <dbl> 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0~
-## $ pred_aorsf  <dbl> 0.74325933, 0.07171843, 0.26549931, 0.65886824, 0.88328061~
-## $ pred_rfsrc  <dbl> 0.60298524, 0.05715514, 0.19512613, 0.57592127, 0.75772791~
-## $ pred_ranger <dbl> 0.61244412, 0.02793571, 0.17943870, 0.64002784, 0.74174298~
-}\if{html}{\out{</div>}}
-
-And finish by aggregating the predictions and computing performance in
-the testing data. Note that I am computing one statistic for all
-predictions instead of computing one statistic for each fold. This
-approach is fine when you have smaller testing sets and/or small event
-counts.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{Score(
- object = list(aorsf = results$pred_aorsf,
-               rfsrc = results$pred_rfsrc,
-               ranger = results$pred_ranger),
- formula = Surv(time, status) ~ 1, 
- data = results, 
- summary = 'IPA',
- times = ph
-)
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{## 
-## Metric AUC:
-## 
-## Results by model:
-## 
-##     model times  AUC lower upper
-## 1:  aorsf  1826 90.2  85.8  94.6
-## 2:  rfsrc  1826 89.4  84.9  93.9
-## 3: ranger  1826 89.8  85.5  94.1
-## 
-## Results of model comparisons:
-## 
-##    times  model reference delta.AUC lower upper   p
-## 1:  1826  rfsrc     aorsf      -0.8  -2.3   0.6 0.3
-## 2:  1826 ranger     aorsf      -0.4  -1.8   1.0 0.6
-## 3:  1826 ranger     rfsrc       0.4  -0.7   1.6 0.4
-
-## 
-## NOTE: Values are multiplied by 100 and given in \%.
-
-## NOTE: The higher AUC the better.
-
-## 
-## Metric Brier:
-## 
-## Results by model:
-## 
-##         model   times Brier lower upper  IPA
-## 1: Null model 1826.25  20.5  18.1  22.9  0.0
-## 2:      aorsf 1826.25  11.0   8.7  13.3 46.2
-## 3:      rfsrc 1826.25  12.0   9.8  14.2 41.3
-## 4:     ranger 1826.25  11.8   9.7  14.0 42.3
-## 
-## Results of model comparisons:
-## 
-##      times  model  reference delta.Brier lower upper            p
-## 1: 1826.25  aorsf Null model        -9.5 -12.1  -6.8 1.504600e-12
-## 2: 1826.25  rfsrc Null model        -8.5 -10.8  -6.1 7.469601e-13
-## 3: 1826.25 ranger Null model        -8.7 -11.0  -6.3 1.022843e-12
-## 4: 1826.25  rfsrc      aorsf         1.0   0.3   1.7 5.805166e-03
-## 5: 1826.25 ranger      aorsf         0.8   0.1   1.5 2.164528e-02
-## 6: 1826.25 ranger      rfsrc        -0.2  -0.7   0.3 4.329685e-01
-
-## 
-## NOTE: Values are multiplied by 100 and given in \%.
-
-## NOTE: The lower Brier the better, the higher IPA the better.
-}\if{html}{\out{</div>}}
-
-From inspection,
-\itemize{
-\item \code{aorsf} obtained slightly higher discrimination (AUC)
-\item \code{aorsf} obtained higher index of prediction accuracy (IPA)
-}
-}
-
-}
-
-\subsection{mlr3 pipelines}{
-
-\strong{Warning}: this code may or may not run depending on your current
-version of \code{mlr3proba}. First we load some additional \code{mlr3} libraries.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{suppressPackageStartupMessages(\{
- library(mlr3verse)
- library(mlr3proba)
- library(mlr3extralearners)
- library(mlr3viz)
- library(mlr3benchmark)
-\})
-}\if{html}{\out{</div>}}
-
-Next we’ll define some tasks for our learners to engage with.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Mayo Clinic Primary Biliary Cholangitis Data
-task_pbc <- 
- TaskSurv$new(
-  id = 'pbc',  
-  backend = select(pbc_orsf, -id) \%>\% 
-   mutate(stage = as.numeric(stage)),  
-  time = "time", 
-  event = "status"
- )
-
-# Veteran's Administration Lung Cancer Trial
-data(veteran, package = "randomForestSRC")
-
-task_veteran <- 
- TaskSurv$new(
-  id = 'veteran',  
-  backend = veteran,  
-  time = "time", 
-  event = "status"
- )
-
-# NKI 70 gene signature
-data_nki <- OpenML::getOMLDataSet(data.id = 1228)
-
-task_nki <- 
- TaskSurv$new(
-  id = 'nki',  
-  backend = data_nki$data,  
-  time = "time", 
-  event = "event"
- )
-
-# Gene Expression-Based Survival Prediction in Lung Adenocarcinoma
-data_lung <- OpenML::getOMLDataSet(data.id = 1245)
-
-task_lung <- 
- TaskSurv$new(
-  id = 'nki',  
-  backend = data_lung$data \%>\% 
-   mutate(OS_event = as.numeric(OS_event) -1),  
-  time = "OS_years", 
-  event = "OS_event"
- )
-
-
-# Chemotherapy for Stage B/C colon cancer
-# (there are two rows per person, one for death 
-#  and the other for recurrence, hence the two tasks)
-
-task_colon_death <-
- TaskSurv$new(
-  id = 'colon_death',  
-  backend = survival::colon \%>\%
-   filter(etype == 2) \%>\% 
-   drop_na() \%>\% 
-   # drop id, redundant variables
-   select(-id, -study, -node4, -etype),
-   mutate(OS_event = as.numeric(OS_event) -1),  
-  time = "time", 
-  event = "status"
- )
-
-task_colon_recur <-
- TaskSurv$new(
-  id = 'colon_death',  
-  backend = survival::colon \%>\%
-   filter(etype == 1) \%>\% 
-   drop_na() \%>\% 
-   # drop id, redundant variables
-   select(-id, -study, -node4, -etype),
-   mutate(OS_event = as.numeric(OS_event) -1),  
-  time = "time", 
-  event = "status"
- )
-
-# putting them all together
-tasks <- list(task_pbc,
-              task_veteran,
-              task_nki,
-              task_lung,
-              task_colon_death,
-              task_colon_recur,
-              # add a few more pre-made ones
-              tsk("actg"),
-              tsk('gbcs'),
-              tsk('grace'),
-              tsk("unemployment"),
-              tsk("whas"))
-}\if{html}{\out{</div>}}
-
-Now we can make a benchmark designed to compare our three favorite
-learners:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Learners with default parameters
-learners <- lrns(c("surv.ranger", "surv.rfsrc", "surv.aorsf"))
-
-# Brier (Graf) score, c-index and training time as measures
-measures <- msrs(c("surv.graf", "surv.cindex", "time_train"))
-
-# Benchmark with 5-fold CV
-design <- benchmark_grid(
-  tasks = tasks,
-  learners = learners,
-  resamplings = rsmps("cv", folds = 5)
-)
-
-benchmark_result <- benchmark(design)
-
-bm_scores <- benchmark_result$score(measures, predict_sets = "test")
-}\if{html}{\out{</div>}}
-
-Let’s look at the overall results:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{bm_scores \%>\%
- select(task_id, learner_id, surv.graf, surv.cindex, time_train) \%>\%
- group_by(learner_id) \%>\% 
- filter(!is.infinite(surv.graf)) \%>\% 
- summarize(
-  across(
-   .cols = c(surv.graf, surv.cindex, time_train),
-   .fns = mean, 
-   na.rm = TRUE
-  )
- )
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{## # A tibble: 3 x 4
-##   learner_id  surv.graf surv.cindex time_train
-##   <chr>           <dbl>       <dbl>      <dbl>
-## 1 surv.aorsf      0.152       0.733      1.41 
-## 2 surv.ranger     0.166       0.712      1.95 
-## 3 surv.rfsrc      0.155       0.723      0.745
-}\if{html}{\out{</div>}}
-
-From inspection,
-\itemize{
-\item \code{aorsf} has a higher expected value for ‘surv.cindex’ (higher is
-better)
-\item \code{aorsf} has a lower expected value for ‘surv.graf’ (lower is better)
-}
 }
 }
 
 \references{
-Harrell FE, Califf RM, Pryor DB, Lee KL, Rosati RA. Evaluating the Yield of Medical Tests. \emph{JAMA} 1982; 247(18):2543-2546. DOI: 10.1001/jama.1982.03320430047030
-
-Breiman L. Random forests. \emph{Machine learning} 2001 Oct; 45(1):5-32. DOI: 10.1023/A:1010933404324
-
-Ishwaran H, Kogalur UB, Blackstone EH, Lauer MS. Random survival forests. \emph{Annals of applied statistics} 2008 Sep; 2(3):841-60. DOI: 10.1214/08-AOAS169
-
-Jaeger BC, Long DL, Long DM, Sims M, Szychowski JM, Min YI, Mcclure LA, Howard G, Simon N. Oblique random survival forests. \emph{Annals of applied statistics} 2019 Sep; 13(3):1847-83. DOI: 10.1214/19-AOAS1261
-
-Jaeger BC, Welden S, Lenoir K, Speiser JL, Segar MW, Pandey A, Pajewski NM. Accelerated and interpretable oblique random survival forests. \emph{Journal of Computational and Graphical Statistics} Published online 08 Aug 2023. DOI: 10.1080/10618600.2023.2231048
+\enumerate{
+\item Harrell, E F, Califf, M R, Pryor, B D, Lee, L K, Rosati, A R (1982).
+"Evaluating the yield of medical tests." \emph{Jama}, \emph{247}(18), 2543-2546.
+\item Breiman, Leo (2001). "Random Forests." \emph{Machine Learning}, \emph{45}(1),
+5-32. ISSN 1573-0565.
+\item Ishwaran H, Kogalur UB, Blackstone EH, Lauer MS (2008). "Random
+survival forests." \emph{The Annals of Applied Statistics}, \emph{2}(3).
+\item Menze, H B, Kelm, Michael B, Splitthoff, N D, Koethe, Ullrich,
+Hamprecht, A F (2011). "On oblique random forests." In \emph{Machine
+Learning and Knowledge Discovery in Databases: European Conference,
+ECML PKDD 2011, Athens, Greece, September 5-9, 2011, Proceedings, Part
+II 22}, 453-469. Springer.
+\item Jaeger BC, Long DL, Long DM, Sims M, Szychowski JM, Min Y, Mcclure LA,
+Howard G, Simon N (2019). "Oblique random survival forests." \emph{The
+Annals of Applied Statistics}, \emph{13}(3).
+\item Jaeger BC, Welden S, Lenoir K, Speiser JL, Segar MW, Pandey A, Pajewski
+NM (2023). "Accelerated and interpretable oblique random survival
+forests." \emph{Journal of Computational and Graphical Statistics}, 1-16.
+}
 }

@@ -7,22 +7,36 @@ knitr::opts_chunk$set(
 )
 
 ## -----------------------------------------------------------------------------
-
 library(aorsf)
 
-set.seed(329)
+## -----------------------------------------------------------------------------
+# An oblique classification RF
+penguin_fit <- orsf(data = penguins_orsf, formula = species ~ .)
 
-orsf_fit <- orsf(data = pbc_orsf, 
-                 n_tree = 5,
-                 formula = Surv(time, status) ~ . - id)
+penguin_fit
 
-orsf_fit
+
+## -----------------------------------------------------------------------------
+# An oblique regression RF
+bill_fit <- orsf(data = penguins_orsf, formula = bill_length_mm ~ .)
+
+bill_fit
+
+
+## -----------------------------------------------------------------------------
+# An oblique survival RF
+pbc_fit <- orsf(data = pbc_orsf, 
+                n_tree = 5,
+                formula = Surv(time, status) ~ . - id)
+
+pbc_fit
 
 
 ## ----eval=FALSE---------------------------------------------------------------
+#  
 #  library(dplyr)
 #  
-#  orsf_fit <- pbc_orsf |>
+#  pbc_fit <- pbc_orsf |>
 #   select(-id) |>
 #   orsf(formula = Surv(time, status) ~ .,
 #        n_tree = 5)
@@ -30,23 +44,23 @@ orsf_fit
 
 ## -----------------------------------------------------------------------------
 
-orsf_vi_negate(orsf_fit)
+orsf_vi_negate(pbc_fit)
 
 
 ## -----------------------------------------------------------------------------
   
-orsf_vi_permute(orsf_fit)
+orsf_vi_permute(penguin_fit)
   
 
 ## -----------------------------------------------------------------------------
 
-orsf_vi_anova(orsf_fit)
+orsf_vi_anova(bill_fit)
 
 
 ## ----eval=FALSE---------------------------------------------------------------
 #  
 #  orsf_net <- orsf(data = pbc_orsf,
 #                   formula = Surv(time, status) ~ . - id,
-#                   control = orsf_control_net())
+#                   control = orsf_control_survival(method = 'net'))
 #  
 

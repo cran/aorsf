@@ -282,8 +282,7 @@
   i = 0;
   uvec output_middle(k-j);
 
-  for(it = it_min+1;
-      it < it_max; ++it){
+  for(it = it_min+1; it < it_max; ++it){
    if(lincomb[*it] != lincomb[*(it+1)]){
     output_middle[i] = it - lincomb_sort.begin();
     i++;
@@ -303,7 +302,7 @@
 
   uword safer_mtry = mtry;
 
-  if(lincomb_type == LC_NEWTON_RAPHSON){
+  if(lincomb_type == LC_GLM){
 
    // Need 3:1 ratio of unweighted events:predictors
    uword n_events_total = sum(y_node.col(1));
@@ -331,9 +330,13 @@
   }
 
   case SPLIT_CONCORD: {
-   result = compute_cstat(y_node, w_node, g_node, true);
+   result = compute_cstat_surv(y_node, w_node, g_node, true);
    break;
   }
+
+  default:
+   Rcpp::stop("invalid split rule");
+   break;
 
   }
 
@@ -341,17 +344,7 @@
 
  }
 
- void TreeSurvival::sprout_leaf(uword node_id){
-
-  if(verbosity > 2){
-   // # nocov start
-   Rcout << "-- sprouting node " << node_id << " into a leaf";
-   Rcout << " (N = " << sum(w_node) << ")";
-   Rcout << std::endl;
-   Rcout << std::endl;
-   // # nocov end
-  }
-
+ void TreeSurvival::sprout_leaf_internal(uword node_id){
 
   // reserve as much size as could be needed (probably more)
   mat leaf_data(y_node.n_rows, 3);
@@ -363,12 +356,10 @@
    person++;
   }
 
-
   // person corresponds to first event or last censor time
   leaf_data.at(0, 0) = y_node.at(person, 0);
 
   // if no events in this node:
-  // should this case even occur? consider removing
   if(person == y_node.n_rows){
 
    vec temp_surv(1, fill::ones);
@@ -498,27 +489,15 @@
  //
  // }
 
- void TreeSurvival::predict_value(arma::mat& pred_output,
-                                  arma::vec& pred_denom,
-                                  PredType pred_type,
-                                  bool oobag){
-
-  uvec pred_leaf_sort = sort_index(pred_leaf, "ascend");
+ arma::uword TreeSurvival::predict_value_internal(
+   arma::uvec& pred_leaf_sort,
+   arma::mat& pred_output,
+   arma::vec& pred_denom,
+   PredType pred_type,
+   bool oobag
+ ){
 
   uvec::iterator it = pred_leaf_sort.begin();
-
-  if(verbosity > 2){
-   // # nocov start
-   uvec tmp_uvec = find(pred_leaf < max_nodes);
-
-   if(tmp_uvec.size() == 0){
-    Rcout << pred_leaf<< std::endl;
-    Rcout << "max_nodes: " << max_nodes << std::endl;
-   }
-
-   Rcout << "   -- N preds expected: " << tmp_uvec.size() << std::endl;
-   // # nocov end
-  }
 
   uword leaf_id = pred_leaf[*it];
 
@@ -541,9 +520,12 @@
 
   double temp_dbl = pred_t0;
   bool break_loop = false;
+  bool do_timeloop = (pred_type == PRED_RISK ||
+                      pred_type == PRED_SURVIVAL ||
+                      pred_type == PRED_CHAZ);
+
 
   for(; ;) {
-
 
    // copies of leaf data using same aux memory
    leaf_times = vec(leaf_pred_indx[leaf_id].begin(),
@@ -578,6 +560,48 @@
 
     break;
 
+   } case PRED_TIME: {
+
+    // believe it or not this method seems to be more accurate
+    // than the traditional one commented out beneath it.
+    temp_vec.fill(median(leaf_times));
+
+    // // does the kaplan meier in this node go below 50% chance of survival?
+    // uvec prob_lt_50 = find(leaf_pred_prob[leaf_id] <= 0.5);
+    //
+    // // If yes, then find the time it crosses
+    // if(prob_lt_50.size() >= 1){
+    //
+    //  // index of the first instance where survival prob is < 50
+    //  uword first_row_50 = prob_lt_50[0];
+    //
+    //  // if the survival prob here is exactly 50, or if
+    //  // there is no predicted probability before this point,
+    //  // do nothing.
+    //
+    //  // otherwise, use the predicted time just before the survival
+    //  // probability dips below 50% (think about how kaplan meiers look)
+    //  double tmp_prob = leaf_pred_prob[leaf_id][first_row_50];
+    //
+    //  if(first_row_50 > 0 && tmp_prob < 0.5) first_row_50--;
+    //
+    //  // use the time value at this specific index
+    //  double time_value = leaf_times[first_row_50];
+    //
+    //  temp_vec.fill(time_value);
+    //
+    // } else {
+    //
+    //  // if the probability of survival never goes below 50%,
+    //  // then it is more likely that the observation's time is
+    //  // greater than the max time of this node. For simplicity,
+    //  // use the max time as the prediction.
+    //  temp_vec.fill(leaf_times[leaf_times.size()-1]);
+    //
+    // }
+
+    break;
+
    }
 
    default:
@@ -589,7 +613,7 @@
    // don't reset i in the loop b/c leaf_times ascend
    i = 0;
 
-   if(pred_type != PRED_MORTALITY){
+   if(do_timeloop){
 
     for(j = 0; j < (*pred_horizon).size(); j++){
 
@@ -670,6 +694,8 @@
 
     }
 
+    // put this predicted value into the predicted output
+    // until we get to a new leaf id
     if(leaf_id != pred_leaf[*it]) break;
 
     pred_output.row(*it) += temp_vec.t();
@@ -690,23 +716,95 @@
 
   }
 
-  if(verbosity > 2){
-   // # nocov start
-   Rcout << "   -- N preds made: " << n_preds_made;
-   Rcout << std::endl;
-   Rcout << std::endl;
-   // # nocov end
+  return(n_preds_made);
+
+ }
+
+ double TreeSurvival::compute_prediction_accuracy_internal(arma::mat& preds){
+
+  if (oobag_eval_type == EVAL_R_FUNCTION){
+
+   vec preds_vec = preds.unsafe_col(0);
+
+   NumericMatrix y_wrap = wrap(y_oobag);
+   NumericVector w_wrap = wrap(w_oobag);
+   NumericVector p_wrap = wrap(preds_vec);
+
+   // initialize function from tree object
+   // (Functions can't be stored in C++ classes, but RObjects can)
+   Function f_oobag = as<Function>(oobag_R_function);
+
+   NumericVector result_R = f_oobag(y_wrap, w_wrap, p_wrap);
+
+   return(result_R[0]);
+
   }
 
+  vec preds_vec = preds.unsafe_col(0);
+
+  return compute_cstat_surv(y_oobag, w_oobag, preds_vec, true);
 
  }
 
- double TreeSurvival::compute_prediction_accuracy_internal(arma::vec& preds){
+ arma::mat TreeSurvival::glm_fit(){
 
-  return compute_cstat(y_oobag, w_oobag, preds, true);
+  mat out = coxph_fit(x_node, y_node, w_node,
+                      lincomb_scale, lincomb_ties_method,
+                      lincomb_eps, lincomb_iter_max);
+
+  return(out);
 
  }
 
+ arma::mat TreeSurvival::glmnet_fit(){
+
+  NumericMatrix xx = wrap(x_node);
+  NumericMatrix yy = wrap(y_node);
+  NumericVector ww = wrap(w_node);
+
+  // initialize function from tree object
+  // (Functions can't be stored in C++ classes, but RObjects can)
+  Function f_beta = as<Function>(lincomb_R_function);
+
+  NumericMatrix beta_R = f_beta(xx, yy, ww,
+                                lincomb_alpha,
+                                lincomb_df_target);
+
+  mat beta = mat(beta_R.begin(), beta_R.nrow(), beta_R.ncol(), false);
+
+  return(beta);
+
+ }
+
+ arma::mat TreeSurvival::user_fit(){
+
+  NumericMatrix xx = wrap(x_node);
+  NumericMatrix yy = wrap(y_node);
+  NumericVector ww = wrap(w_node);
+
+  // initialize function from tree object
+  // (Functions can't be stored in C++ classes, but RObjects can)
+  Function f_beta = as<Function>(lincomb_R_function);
+
+  NumericMatrix beta_R = f_beta(xx, yy, ww);
+
+  mat beta = mat(beta_R.begin(), beta_R.nrow(), beta_R.ncol(), false);
+
+  return(beta);
+
+ }
+
+ uword TreeSurvival::get_n_col_vi(){
+  return(1);
+ }
+
+ void TreeSurvival::predict_value_vi(mat& pred_values){
+
+  for(uword i = 0; i < pred_values.n_rows; ++i){
+   pred_values.at(i, 0) = leaf_summary[pred_leaf[i]];
+  }
+
+ }
 
  } // namespace aorsf
 

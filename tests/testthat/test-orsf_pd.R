@@ -1,3 +1,91 @@
+
+# survival ----
+
+test_that(
+ desc = "Survival partial dependence",
+ code = {
+
+  # this has brought up partial memory leaks when it runs in the
+  # testing process, but the source of the leak has been difficult
+  # to pin-point. Skipping these tests on CRAN until I can find it.
+  skip_on_cran()
+
+  fit <- fit_standard_pbc$fast
+
+  pd_object_grid <- orsf_pd_oob(object = fit,
+                                pred_spec = pred_spec_auto(sex, bili),
+                                pred_horizon = c(1000))
+
+  pd_object_loop <- orsf_pd_oob(object = fit,
+                                expand_grid = FALSE,
+                                pred_spec = pred_spec_auto(sex, bili),
+                                pred_horizon = c(1000))
+
+  expect_equal(unique(pd_object_grid$bili),
+               fit$get_var_bounds('bili'))
+
+  expect_equal(unique(na.omit(pd_object_loop$value)),
+               fit$get_var_bounds('bili'))
+
+  expect_s3_class(pd_object_grid, 'data.table')
+  expect_s3_class(pd_object_loop, 'data.table')
+
+ }
+)
+
+
+
+
+# classification ----
+
+fit <- fit_standard_penguin_species$fast
+
+pd_object_grid <- orsf_pd_new(object = fit,
+                              new_data = penguins_orsf,
+                              pred_spec = pred_spec_auto(bill_length_mm,
+                                                         bill_depth_mm))
+
+pd_object_loop <- orsf_pd_new(object = fit,
+                              new_data = penguins_orsf,
+                              expand_grid = FALSE,
+                              pred_spec = pred_spec_auto(bill_length_mm,
+                                                         bill_depth_mm))
+
+test_that(
+ desc = "probability values are bounded",
+ code = {
+  expect_true(all(pd_object_grid$mean <= 1))
+  expect_true(all(pd_object_grid$mean >= 0))
+  expect_true(all(pd_object_loop$mean <= 1))
+  expect_true(all(pd_object_loop$mean >= 0))
+ }
+)
+
+
+# regression ----
+
+fit <- fit_standard_penguin_bills$fast
+
+pd_object_grid <- orsf_pd_inb(object = fit,
+                              pred_spec = pred_spec_auto(species, island),
+                              pred_horizon = c(1000, 2000))
+
+pd_object_loop <- orsf_pd_inb(object = fit,
+                              expand_grid = FALSE,
+                              pred_spec = pred_spec_auto(species, island),
+                              pred_horizon = c(1000, 2000))
+
+test_that(
+ desc = "levels are converted to character values only if needed",
+ code = {
+  expect_false(is.character(pd_object_grid$species))
+  expect_true(is.character(pd_object_loop$level))
+ }
+)
+
+
+# general ----
+
 test_that(
  desc = "oob stops if there are no data",
  code = {
@@ -14,10 +102,11 @@ test_that(
  }
 )
 
+
 fit <- fit_standard_pbc$fast
 
 test_that(
- "user cant supply empty pred_spec",
+ "cant supply empty pred_spec",
  code = {
   expect_error(
    orsf_ice_oob(fit, pred_spec = list()),
@@ -27,13 +116,20 @@ test_that(
 )
 
 test_that(
- "user cant supply pred_spec with non-matching names",
+ "cant supply pred_spec with non-matching names",
  code = {
   expect_error(
    orsf_ice_oob(fit,
                 pred_spec = list(bili = 1:5,
                                  nope = c(1,2),
                                  no_sir = 1),
+                pred_horizon = 1000),
+   regexp = 'nope and no_sir'
+  )
+
+  expect_error(
+   orsf_ice_oob(fit,
+                pred_spec = pred_spec_auto(bili, nope, no_sir),
                 pred_horizon = 1000),
    regexp = 'nope and no_sir'
   )
@@ -44,7 +140,7 @@ bad_value_lower <- quantile(pbc_orsf$bili, probs = 0.01)
 bad_value_upper <- quantile(pbc_orsf$bili, probs = 0.99)
 
 test_that(
- "user cant supply pred_spec with values out of bounds",
+ "cant supply pred_spec with values out of bounds",
  code = {
   expect_error(
    orsf_pd_new(fit,
@@ -55,96 +151,6 @@ test_that(
   )
  }
 )
-
-funs <- list(
- # ice_new = orsf_ice_new,
- # ice_inb = orsf_ice_inb,
- # ice_oob = orsf_ice_oob,
- pd_new = orsf_pd_new,
- pd_inb = orsf_pd_inb,
- pd_oob = orsf_pd_oob
-)
-
-args_loop <- args_grid <- list(
- object = fit,
- pred_spec = list(bili = 1:4, sex = c("m", "f")),
- new_data = pbc_test,
- pred_horizon = 1000,
- pred_type = 'risk',
- na_action = 'fail',
- expand_grid = TRUE,
- prob_values = c(0.025, 0.50, 0.975),
- prob_labels = c("lwr", "medn", "upr"),
- boundary_checks = TRUE,
- n_thread = 1
-)
-
-args_loop$expand_grid <- FALSE
-
-for(i in seq_along(funs)){
-
- f_name <- names(funs)[i]
-
- formals <- setdiff(names(formals(funs[[i]])), '...')
-
- for(pred_type in setdiff(pred_types_surv, c('leaf'))){
-
-  args_grid$pred_type = pred_type
-  args_loop$pred_type = pred_type
-
-  pd_object_grid <- do.call(funs[[i]], args = args_grid[formals])
-  pd_object_loop <- do.call(funs[[i]], args = args_loop[formals])
-
-  test_that(
-   desc = paste('pred_spec data are returned on the original scale',
-                ' for orsf_', f_name, sep = ''),
-   code = {
-    expect_equal(unique(pd_object_grid$bili), 1:4)
-    expect_equal(unique(pd_object_loop[variable == 'bili', value]), 1:4)
-   }
-  )
-
-  test_that(
-   desc = paste(f_name, 'returns a data.table'),
-   code = {
-    expect_s3_class(pd_object_grid, 'data.table')
-    expect_s3_class(pd_object_loop, 'data.table')
-   }
-  )
-
-  test_that(
-   desc = 'output is named correctly',
-   code = {
-
-    if(f_name %in% c("ice_new", "ice_inb", "ice_oob")){
-     expect_true('id_variable' %in% names(pd_object_grid))
-     expect_true('id_variable' %in% names(pd_object_loop))
-     expect_true('id_row' %in% names(pd_object_grid))
-     expect_true('id_row' %in% names(pd_object_loop))
-    }
-
-    expect_true('variable' %in% names(pd_object_loop))
-    expect_true('value' %in% names(pd_object_loop))
-
-    vars <- names(args_loop$pred_spec)
-    expect_true(all(vars %in% names(pd_object_grid)))
-    expect_true(all(vars %in% unique(pd_object_loop$variable)))
-
-    if(pred_type == 'mort'){
-     expect_false('pred_horizon' %in% names(pd_object_grid))
-     expect_false('pred_horizon' %in% names(pd_object_loop))
-    }
-
-   }
-  )
-
-
-
- }
-
-
-}
-
 
 pd_vals_ice <- orsf_ice_new(
  fit,
@@ -177,6 +183,7 @@ test_that(
 )
 
 
+
 test_that(
  'No missing values in summary output',
  code = {
@@ -190,8 +197,11 @@ test_that(
  'multi-valued horizon inputs are allowed',
  code = {
 
+  skip_on_cran()
+
   pd_smry_multi_horiz <- orsf_pd_oob(
    fit,
+   pred_type = 'risk',
    pred_spec = list(bili = 1),
    pred_horizon = c(1000, 2000, 3000)
   )
@@ -204,6 +214,7 @@ test_that(
 
   pd_ice_multi_horiz <- orsf_ice_oob(
    fit,
+   pred_type = 'risk',
    pred_spec = list(bili = 1),
    pred_horizon = c(1000, 2000, 3000)
   )
@@ -219,11 +230,11 @@ test_that(
 
 )
 
-# These tests are kept commented out and run locally
-# I dont want to suggest pdp package in DESCRIPTION just for testing
+# # These tests are kept commented out and run locally
+# # I dont want to suggest pdp package in DESCRIPTION just for testing
 # library(pdp)
 #
-# pred_aorsf <- function(object, newdata) {  # see ?predict.orsf_fit
+# pred_aorsf <- function(object, newdata) {  # see ?predict.ObliqueForest
 #  as.numeric(predict(object, newdata, pred_horizon = 1000))
 # }
 #
@@ -280,7 +291,7 @@ test_that(
 #   expect_equal(pd_bcj$pred, pd_refsort$yhat)
 #  }
 # )
-
+#
 # bili_seq <- seq(1, 5, length.out=20)
 #
 # microbenchmark::microbenchmark(

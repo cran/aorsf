@@ -6,7 +6,7 @@ knitr::opts_chunk$set(
   fig.width = 7
 )
 
-## ----setup--------------------------------------------------------------------
+## ----setup, warning=FALSE-----------------------------------------------------
 
 library(aorsf)
 library(survival)
@@ -22,7 +22,7 @@ fit <- orsf(data = pbc_orsf,
             oobag_pred_horizon = 2000)
 
 hist(fit$pred_oobag, 
-     main = 'Ensemble out-of-bag survival predictions at t=3,500')
+     main = 'Out-of-bag survival predictions at t=2,000')
 
 
 ## -----------------------------------------------------------------------------
@@ -57,7 +57,7 @@ lines(x=seq(1, 20), y = fit$eval_oobag$stat_values)
 
 ## -----------------------------------------------------------------------------
 
-oobag_fun_brier <- function(y_mat, w_vec, s_vec){
+oobag_brier_surv <- function(y_mat, w_vec, s_vec){
 
  # output is numeric vector of length 1
  as.numeric(
@@ -73,55 +73,26 @@ oobag_fun_brier <- function(y_mat, w_vec, s_vec){
 
 ## -----------------------------------------------------------------------------
 
-oobag_fun_brier(y_mat = pbc_orsf[,c('time', 'status')],
-                s_vec = fit$pred_oobag)
+oobag_brier_surv(y_mat = pbc_orsf[,c('time', 'status')],
+                 s_vec = fit$pred_oobag)
 
 
 ## -----------------------------------------------------------------------------
 
-fit <- orsf(data = pbc_orsf,
-            formula = Surv(time, status) ~ . - id,
-            n_tree = 20,
-            tree_seeds = 2,
-            oobag_pred_horizon = 2000,
-            oobag_fun = oobag_fun_brier,
-            oobag_eval_every = 1)
+# instead of copy/pasting the modeling code and then modifying it,
+# you can just use orsf_update.
+
+fit_brier <- orsf_update(fit, oobag_fun = oobag_brier_surv)
 
 plot(
  x = seq(1, 20, by = 1),
- y = fit$eval_oobag$stat_values, 
+ y = fit_brier$eval_oobag$stat_values, 
  main = 'Out-of-bag error computed after each new tree is grown.',
  sub = 'For the Brier score, lower values indicate more accurate predictions',
  xlab = 'Number of trees grown',
  ylab = "Brier score"
 )
 
-lines(x=seq(1, 20), y = fit$eval_oobag$stat_values)
-
-
-## -----------------------------------------------------------------------------
-
-# Helper code to make sure your oobag_fun function will work with aorsf
-
-# time and status values
-test_time <- seq(from = 1, to = 5, length.out = 100)
-test_status <- rep(c(0,1), each = 50)
-
-# y-matrix is presumed to contain time and status (with column names)
-y_mat <- cbind(time = test_time, status = test_status)
-# s_vec is presumed to be a vector of survival probabilities
-s_vec <- seq(0.9, 0.1, length.out = 100)
-
-# see 1 in the checklist above
-names(formals(oobag_fun_brier)) == c("y_mat", "w_vec", "s_vec")
-
-test_output <- oobag_fun_brier(y_mat = y_mat, 
-                               w_vec = w_vec,
-                               s_vec = s_vec)
-
-# test output should be numeric
-is.numeric(test_output)
-# test_output should be a numeric value of length 1
-length(test_output) == 1
+lines(x=seq(1, 20), y = fit_brier$eval_oobag$stat_values)
 
 

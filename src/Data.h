@@ -34,9 +34,10 @@
    this->w = w;
 
    this->n_rows = x.n_rows;
-   this->n_cols = x.n_cols;
+   this->n_cols_x = x.n_cols;
+   this->n_cols_y = y.n_cols;
    this->has_weights = !w.empty();
-   this->saved_values.resize(n_cols);
+   this->saved_values.resize(n_cols_x);
 
   }
 
@@ -45,8 +46,8 @@
    return(n_rows);
   }
 
-  arma::uword get_n_cols() {
-   return(n_cols);
+  arma::uword get_n_cols_x() {
+   return(n_cols_x);
   }
 
   arma::mat& get_x(){
@@ -113,6 +114,45 @@
 
   }
 
+  // multiply X matrix by lincomb coefficients
+  // without taking a sub-matrix of X
+  arma::vec x_submat_mult_beta(arma::uvec& x_rows,
+                               arma::uvec& x_cols,
+                               arma::vec&  beta,
+                               arma::vec&  pd_x_vals,
+                               arma::uvec& pd_x_cols){
+
+   if(pd_x_cols.is_empty()){
+    return(x_submat_mult_beta(x_rows, x_cols, beta));
+   }
+
+   arma::vec out(x_rows.size());
+   arma::uword j = 0;
+
+   for(auto col : x_cols){
+
+    arma::uword i = 0;
+    arma::uvec pd_col = find(pd_x_cols == col);
+
+    if(pd_col.is_empty()){
+     for(auto row : x_rows){
+      out[i] += x.at(row, col) * beta[j];
+      i++;
+     }
+    } else {
+     for(i = 0; i < out.size(); i++){
+      out[i] += pd_x_vals[pd_col[0]] * beta[j];
+     }
+    }
+
+    j++;
+
+   }
+
+   return(out);
+
+  }
+
   void permute_col(arma::uword j, std::mt19937_64& rng){
 
    arma::vec x_j = x.unsafe_col(j);
@@ -138,7 +178,8 @@
 
   // member variables
 
-  arma::uword n_cols;
+  arma::uword n_cols_x;
+  arma::uword n_cols_y;
   arma::uword n_rows;
   arma::vec w;
 

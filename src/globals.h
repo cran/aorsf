@@ -30,13 +30,17 @@
  // Split mode
  enum SplitRule {
   SPLIT_LOGRANK = 1,
-  SPLIT_CONCORD = 2
+  SPLIT_CONCORD = 2,
+  SPLIT_GINI = 3,
+  SPLIT_VARIANCE = 4
  };
 
  enum EvalType {
   EVAL_NONE = 0,
   EVAL_CONCORD = 1,
-  EVAL_R_FUNCTION = 2
+  EVAL_R_FUNCTION = 2,
+  EVAL_MSE = 3,
+  EVAL_RSQ = 4,
  };
 
  enum PartialDepType {
@@ -47,7 +51,7 @@
 
  // Linear combination method
  enum LinearCombo {
-  LC_NEWTON_RAPHSON = 1,
+  LC_GLM = 1,
   LC_RANDOM_COEFS = 2,
   LC_GLMNET = 3,
   LC_R_FUNCTION = 4
@@ -63,7 +67,8 @@
   PRED_MEAN = 5,
   PRED_PROBABILITY = 6,
   PRED_CLASS = 7,
-  PRED_TERMINAL_NODES = 8
+  PRED_TERMINAL_NODES = 8,
+  PRED_TIME = 9
  };
 
  // Default values
@@ -86,7 +91,7 @@
  const arma::uword DEFAULT_SPLIT_MAX_CUTS = 5;
  const arma::uword DEFAULT_MAX_RETRY = 3;
 
- const LinearCombo DEFAULT_LINCOMB = LC_NEWTON_RAPHSON;
+ const LinearCombo DEFAULT_LINCOMB = LC_GLM;
  const double      DEFAULT_LINCOMB_EPS = 1e-9;
  const arma::uword DEFAULT_LINCOMB_ITER_MAX = 20;
  const bool        DEFAULT_LINCOMB_SCALE = true;

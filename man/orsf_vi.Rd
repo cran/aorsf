@@ -5,15 +5,15 @@
 \alias{orsf_vi_negate}
 \alias{orsf_vi_permute}
 \alias{orsf_vi_anova}
-\title{ORSF variable importance}
+\title{Variable Importance}
 \usage{
 orsf_vi(
   object,
   group_factors = TRUE,
   importance = NULL,
   oobag_fun = NULL,
-  n_thread = 1,
-  verbose_progress = FALSE,
+  n_thread = NULL,
+  verbose_progress = NULL,
   ...
 )
 
@@ -21,8 +21,8 @@ orsf_vi_negate(
   object,
   group_factors = TRUE,
   oobag_fun = NULL,
-  n_thread = 1,
-  verbose_progress = FALSE,
+  n_thread = NULL,
+  verbose_progress = NULL,
   ...
 )
 
@@ -30,16 +30,15 @@ orsf_vi_permute(
   object,
   group_factors = TRUE,
   oobag_fun = NULL,
-  n_thread = 1,
-  verbose_progress = FALSE,
+  n_thread = NULL,
+  verbose_progress = NULL,
   ...
 )
 
-orsf_vi_anova(object, group_factors = TRUE, ...)
+orsf_vi_anova(object, group_factors = TRUE, verbose_progress = NULL, ...)
 }
 \arguments{
-\item{object}{(\emph{orsf_fit}) a trained oblique random survival forest
-(see \link{orsf}).}
+\item{object}{(\emph{ObliqueForest}) a trained oblique random forest object (see \link{orsf}).}
 
 \item{group_factors}{(\emph{logical}) if \code{TRUE}, the importance of factor variables will be reported overall by aggregating the importance of individual levels of the factor. If \code{FALSE}, the importance of individual factor levels will be returned.}
 
@@ -54,12 +53,15 @@ orsf_vi_anova(object, group_factors = TRUE, ...)
 (if importance = 'negate') or permuting the values of a predictor
 (if importance = 'permute')
 \itemize{
-\item When \code{oobag_fun = NULL} (the default), Harrell's C-statistic (1982) is used to evaluate accuracy.
+\item When \code{oobag_fun = NULL} (the default), the evaluation statistic is selected based on tree type
+\item survival: Harrell's C-statistic (1982)
+\item classification: Area underneath the ROC curve (AUC-ROC)
+\item regression: Traditional prediction R-squared
 \item if you use your own \code{oobag_fun} note the following:
 \itemize{
-\item \code{oobag_fun} should have two inputs: \code{y_mat} and \code{s_vec}
-\item \code{y_mat} is a two column matrix with first column named 'time', second named 'status'
-\item \code{s_vec} is a numeric vector containing predicted survival probabilities.
+\item \code{oobag_fun} should have three inputs: \code{y_mat}, \code{w_vec}, and \code{s_vec}
+\item For survival trees, \code{y_mat} should be a two column matrix with first column named 'time' and second named 'status'. For classification trees, \code{y_mat} should be a matrix with number of columns = number of distinct classes in the outcome. For regression, \code{y_mat} should be a matrix with one column.
+\item \code{s_vec} is a numeric vector containing predictions
 \item \code{oobag_fun} should return a numeric output of length 1
 \item the same \code{oobag_fun} should have been used when you created \code{object}
 so that the initial value of out-of-bag prediction accuracy is
@@ -71,7 +73,7 @@ importance is estimated.
 For more details, see the out-of-bag
 \href{https://docs.ropensci.org/aorsf/articles/oobag.html}{vignette}.}
 
-\item{n_thread}{(\emph{integer}) number of threads to use while computing predictions. Default is one thread. To use the maximum number of threads that your system provides for concurrent execution, set \code{n_thread = 0}.}
+\item{n_thread}{(\emph{integer}) number of threads to use while computing predictions. Default is 0, which allows a suitable number of threads to be used based on availability.}
 
 \item{verbose_progress}{(\emph{logical}) if \code{TRUE}, progress messages are
 printed in the console. If \code{FALSE} (the default), nothing is printed.}
@@ -89,18 +91,18 @@ The returned vector is sorted from highest to lowest value, with higher
 values indicating higher importance.
 }
 \description{
-Estimate the importance of individual variables using oblique random
-survival forests.
+Estimate the importance of individual predictor variables using
+oblique random forests.
 }
 \details{
-When an \code{orsf_fit} object is fitted with importance = 'anova', 'negate', or
-'permute', the output will have a vector of importance values based on
-the requested type of importance. However, you may still want to call
-\code{orsf_vi()} on this output if you want to group factor levels into one
-overall importance value.
+When an \code{ObliqueForest} object is grown with importance = 'anova',
+'negate', or 'permute', the output will have a vector of importance
+values based on the requested type of importance. However, \code{orsf_vi()}
+can be used to compute variable importance after growing a forest
+or to compute a different type of importance.
 
 \code{orsf_vi()} is a general purpose function to extract or compute variable
-importance estimates from an \code{'orsf_fit'} object (see \link{orsf}).
+importance estimates from an \code{ObliqueForest} object (see \link{orsf}).
 \code{orsf_vi_negate()}, \code{orsf_vi_permute()}, and \code{orsf_vi_anova()} are wrappers
 for \code{orsf_vi()}. The way these functions work depends on whether the
 \code{object} they are given already has variable importance estimates in it
@@ -120,7 +122,7 @@ or not (see examples).
 \subsection{ANOVA importance}{
 
 The default variable importance technique, ANOVA, is calculated while
-you fit an ORSF ensemble.
+you fit an oblique random forest ensemble.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{fit <- orsf(pbc_orsf, Surv(time, status) ~ . - id)
 
@@ -135,11 +137,11 @@ fit
 ##                  N trees: 500
 ##       N predictors total: 17
 ##    N predictors per node: 5
-##  Average leaves per tree: 21
+##  Average leaves per tree: 21.022
 ## Min observations in leaf: 5
 ##       Min events in leaf: 1
 ##           OOB stat value: 0.84
-##            OOB stat type: Harrell's C-statistic
+##            OOB stat type: Harrell's C-index
 ##      Variable importance: anova
 ## 
 ## -----------------------------------------
@@ -153,15 +155,28 @@ as the permutation and negation techniques for variable selection.
 
 the ‘raw’ variable importance values can be accessed from the fit object
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{attr(fit, 'importance_values')
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit$get_importance_raw()
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##     edema_1   ascites_1        bili      copper     albumin         age 
-##  0.53189300  0.49950642  0.39598881  0.30443254  0.26028060  0.24758399 
-##     protime       stage        chol   edema_0.5   spiders_1         ast 
-##  0.22874192  0.20974576  0.20353982  0.18401760  0.18090452  0.17457962 
-##    hepato_1       sex_f        trig    alk.phos    platelet trt_placebo 
-##  0.16402406  0.14803440  0.13009809  0.11627907  0.07853659  0.06939410
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##                   [,1]
+## trt_placebo 0.06355042
+## age         0.23259259
+## sex_f       0.14700432
+## ascites_1   0.46791708
+## hepato_1    0.14349776
+## spiders_1   0.17371938
+## edema_0.5   0.17459191
+## edema_1     0.51197605
+## bili        0.40590758
+## chol        0.17666667
+## albumin     0.25972156
+## copper      0.28840580
+## alk.phos    0.10614251
+## ast         0.18327491
+## trig        0.12815626
+## platelet    0.09265648
+## protime     0.22656250
+## stage       0.20264766
 }\if{html}{\out{</div>}}
 
 these are ‘raw’ because values for factors have not been aggregated into
@@ -177,15 +192,16 @@ To get aggregated values across all levels of each factor,
 \itemize{
 \item access the \code{importance} element from the \code{orsf} fit:
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit$importance
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# this assumes you used group_factors = TRUE in orsf()
+fit$importance
 }\if{html}{\out{</div>}}
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{##    ascites       bili      edema     copper    albumin        age    protime 
-## 0.49950642 0.39598881 0.32482431 0.30443254 0.26028060 0.24758399 0.22874192 
-##      stage       chol    spiders        ast     hepato        sex       trig 
-## 0.20974576 0.20353982 0.18090452 0.17457962 0.16402406 0.14803440 0.13009809 
+## 0.46791708 0.40590758 0.31115216 0.28840580 0.25972156 0.23259259 0.22656250 
+##      stage        ast       chol    spiders        sex     hepato       trig 
+## 0.20264766 0.18327491 0.17666667 0.17371938 0.14700432 0.14349776 0.12815626 
 ##   alk.phos   platelet        trt 
-## 0.11627907 0.07853659 0.06939410
+## 0.10614251 0.09265648 0.06355042
 }\if{html}{\out{</div>}}
 \item use \code{orsf_vi()} with group_factors set to \code{TRUE} (the default)
 
@@ -193,11 +209,11 @@ To get aggregated values across all levels of each factor,
 }\if{html}{\out{</div>}}
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{##    ascites       bili      edema     copper    albumin        age    protime 
-## 0.49950642 0.39598881 0.32482431 0.30443254 0.26028060 0.24758399 0.22874192 
-##      stage       chol    spiders        ast     hepato        sex       trig 
-## 0.20974576 0.20353982 0.18090452 0.17457962 0.16402406 0.14803440 0.13009809 
+## 0.46791708 0.40590758 0.31115216 0.28840580 0.25972156 0.23259259 0.22656250 
+##      stage        ast       chol    spiders        sex     hepato       trig 
+## 0.20264766 0.18327491 0.17666667 0.17371938 0.14700432 0.14349776 0.12815626 
 ##   alk.phos   platelet        trt 
-## 0.11627907 0.07853659 0.06939410
+## 0.10614251 0.09265648 0.06355042
 }\if{html}{\out{</div>}}
 }
 
@@ -206,9 +222,9 @@ by setting \code{group_factors} to \code{FALSE} in the \code{orsf_vi} functions 
 \code{orsf} function.
 }
 
-\subsection{Add VI to an ORSF}{
+\subsection{Add VI to an oblique random forest}{
 
-You can fit an ORSF without VI, then add VI later
+You can fit an oblique random forest without VI, then add VI later
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{fit_no_vi <- orsf(pbc_orsf,
                   Surv(time, status) ~ . - id,
@@ -220,48 +236,48 @@ You can fit an ORSF without VI, then add VI later
 orsf_vi_negate(fit_no_vi)
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##        bili      copper         sex     protime       stage     albumin 
-## 0.118368091 0.048934519 0.037084634 0.027045537 0.023883035 0.021168322 
-##         age     ascites        chol         ast      hepato       edema 
-## 0.020510253 0.014990139 0.014700024 0.011445420 0.007705758 0.007216976 
-##     spiders        trig    alk.phos         trt    platelet 
-## 0.006373687 0.003230074 0.002825097 0.002487956 0.001558061
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##        bili      copper         sex     protime         age       stage 
+## 0.130439814 0.051880867 0.038308025 0.025115249 0.023826061 0.020354822 
+##     albumin     ascites        chol         ast     spiders      hepato 
+## 0.019997729 0.015918292 0.013320469 0.010086726 0.007409116 0.007326714 
+##       edema         trt    alk.phos        trig    platelet 
+## 0.006844435 0.003214544 0.002517057 0.002469545 0.001056829
 }\if{html}{\out{</div>}}
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{orsf_vi_permute(fit_no_vi)
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##          bili        copper       protime       albumin       ascites 
-##  0.0546262009  0.0248983335  0.0154588025  0.0135496100  0.0134187625 
-##           age         stage          chol         edema           ast 
-##  0.0119125415  0.0114086074  0.0074840971  0.0052955192  0.0051264428 
-##        hepato       spiders           sex          trig      alk.phos 
-##  0.0050509057  0.0046277553  0.0039395847  0.0024127938  0.0009590829 
-##      platelet           trt 
-##  0.0004366080 -0.0018115005
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##          bili        copper           age       ascites       protime 
+##  0.0592069141  0.0237362075  0.0136479213  0.0130805894  0.0123091354 
+##         stage       albumin          chol        hepato           ast 
+##  0.0117177661  0.0106414724  0.0064501213  0.0058813969  0.0057753740 
+##         edema       spiders           sex          trig      platelet 
+##  0.0052171180  0.0048427005  0.0023386947  0.0017883700  0.0013533691 
+##      alk.phos           trt 
+##  0.0006492029 -0.0009921507
 }\if{html}{\out{</div>}}
 }
 
-\subsection{ORSF and VI all at once}{
+\subsection{Oblique random forest and VI all at once}{
 
-fit an ORSF and compute vi at the same time
+fit an oblique random forest and compute vi at the same time
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{fit_permute_vi <- orsf(pbc_orsf,
-                        Surv(time, status) ~ . - id,
-                        importance = 'permute')
+                       Surv(time, status) ~ . - id,
+                       importance = 'permute')
 
 # get the vi instantly (i.e., it doesn't need to be computed again)
 orsf_vi_permute(fit_permute_vi)
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##          bili        copper           age       ascites       albumin 
-##  5.354589e-02  2.608966e-02  1.286604e-02  1.250721e-02  1.206669e-02 
-##       protime         stage           ast          chol         edema 
-##  1.083811e-02  1.056282e-02  8.224237e-03  6.016773e-03  5.831833e-03 
-##       spiders        hepato           sex          trig      alk.phos 
-##  4.736005e-03  3.446193e-03  3.440979e-03  2.277363e-03  2.224448e-03 
-##      platelet           trt 
-##  1.424653e-03 -1.351124e-05
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##          bili        copper       ascites       protime       albumin 
+##  0.0571305446  0.0243657146  0.0138318057  0.0133401675  0.0130746154 
+##           age         stage          chol           ast       spiders 
+##  0.0123610374  0.0102963203  0.0077895394  0.0075250059  0.0048628813 
+##         edema        hepato           sex      platelet          trig 
+##  0.0046003168  0.0039818730  0.0016891584  0.0012767063  0.0007324402 
+##      alk.phos           trt 
+##  0.0005128897 -0.0014443967
 }\if{html}{\out{</div>}}
 
 You can still get negation VI from this fit, but it needs to be computed
@@ -269,22 +285,76 @@ You can still get negation VI from this fit, but it needs to be computed
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{orsf_vi_negate(fit_permute_vi)
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{##        bili      copper         sex       stage     protime     albumin 
-## 0.124731632 0.052319855 0.038669229 0.027453339 0.022757244 0.022220823 
-##         age         ast     ascites        chol     spiders       edema 
-## 0.020417138 0.013403277 0.013193815 0.011895708 0.008962837 0.007361044 
-##      hepato         trt        trig    alk.phos    platelet 
-## 0.006428047 0.004371012 0.004240743 0.003232336 0.002575995
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##        bili      copper         sex     protime       stage         age 
+## 0.123331760 0.052544318 0.037291358 0.024977898 0.023239189 0.021934511 
+##     albumin     ascites        chol         ast     spiders       edema 
+## 0.020586632 0.014229536 0.014053040 0.012227048 0.007643156 0.006832766 
+##      hepato         trt    alk.phos        trig    platelet 
+## 0.006301693 0.004348705 0.002371797 0.002309396 0.001347035
+}\if{html}{\out{</div>}}
+}
+
+\subsection{Custom functions for VI}{
+
+The default prediction accuracy functions work well most of the time:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit_standard <- orsf(penguins_orsf, bill_length_mm ~ ., tree_seeds = 1)
+
+# Default method for prediction accuracy with VI is R-squared
+orsf_vi_permute(fit_standard)
+}\if{html}{\out{</div>}}
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##           species flipper_length_mm       body_mass_g     bill_depth_mm 
+##      0.3725898166      0.3261834607      0.2225730676      0.1026569498 
+##            island               sex              year 
+##      0.0876071687      0.0844807334      0.0006978493
+}\if{html}{\out{</div>}}
+
+But sometimes you want to do something specific and the defaults just
+won’t work. For these cases, you can compute VI with any function you’d
+like to measure prediction accuracy by supplying a valid function to the
+\code{oobag_fun} input. For example, we use mean absolute error below. Higher
+values are considered good when \code{aorsf} computes prediction accuracy, so
+we make our function return a pseudo R-squared based on mean absolute
+error:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{rsq_mae <- function(y_mat, w_vec, s_vec)\{
+ 
+ mae_standard <- mean(abs((y_mat - mean(y_mat)) * w_vec))
+ mae_fit <- mean(abs((y_mat - s_vec) * w_vec))
+ 
+ 1 - mae_fit / mae_standard
+ 
+\}
+
+fit_custom <- orsf_update(fit_standard, oobag_fun = rsq_mae)
+
+# not much changes, but the difference between variables shrinks
+# and the ordering of sex and island has swapped
+orsf_vi_permute(fit_custom)
+}\if{html}{\out{</div>}}
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{##           species flipper_length_mm       body_mass_g     bill_depth_mm 
+##       0.206951751       0.193248912       0.140899603       0.076759148 
+##               sex            island              year 
+##       0.073042331       0.050851073       0.003633365
 }\if{html}{\out{</div>}}
 }
 }
 
 \references{
-Harrell FE, Califf RM, Pryor DB, Lee KL, Rosati RA. Evaluating the Yield of Medical Tests. \emph{JAMA} 1982; 247(18):2543-2546. DOI: 10.1001/jama.1982.03320430047030
-
-Breiman L. Random forests. \emph{Machine learning} 2001 Oct; 45(1):5-32. DOI: 10.1023/A:1010933404324
-
-Menze BH, Kelm BM, Splitthoff DN, Koethe U, Hamprecht FA. On oblique random forests. \emph{Joint European Conference on Machine Learning and Knowledge Discovery in Databases} 2011 Sep 4; pp. 453-469. DOI: 10.1007/978-3-642-23783-6_29
-
-Jaeger BC, Welden S, Lenoir K, Speiser JL, Segar MW, Pandey A, Pajewski NM. Accelerated and interpretable oblique random survival forests. \emph{Journal of Computational and Graphical Statistics} Published online 08 Aug 2023. DOI: 10.1080/10618600.2023.2231048
+\enumerate{
+\item Harrell, E F, Califf, M R, Pryor, B D, Lee, L K, Rosati, A R (1982).
+"Evaluating the yield of medical tests." \emph{Jama}, \emph{247}(18), 2543-2546.
+\item Breiman, Leo (2001). "Random Forests." \emph{Machine Learning}, \emph{45}(1),
+5-32. ISSN 1573-0565.
+\item Menze, H B, Kelm, Michael B, Splitthoff, N D, Koethe, Ullrich,
+Hamprecht, A F (2011). "On oblique random forests." In \emph{Machine
+Learning and Knowledge Discovery in Databases: European Conference,
+ECML PKDD 2011, Athens, Greece, September 5-9, 2011, Proceedings, Part
+II 22}, 453-469. Springer.
+\item Jaeger BC, Welden S, Lenoir K, Speiser JL, Segar MW, Pandey A, Pajewski
+NM (2023). "Accelerated and interpretable oblique random survival
+forests." \emph{Journal of Computational and Graphical Statistics}, 1-16.
+}
 }

@@ -12,18 +12,17 @@ library(aorsf)
 time_fast <- system.time(
  expr = orsf(pbc_orsf, 
              formula = time+status~. -id, 
-             control = orsf_control_fast(), 
              n_tree = 5)
 )
 
 time_net <- system.time(
  expr = orsf(pbc_orsf, 
              formula = time+status~. -id, 
-             control = orsf_control_net(), 
+             control = orsf_control_survival(method = 'net'), 
              n_tree = 5)
 )
 
-# control_fast() is much faster
+# unspecified control is much faster
 time_net['elapsed'] / time_fast['elapsed']
 
 
@@ -41,7 +40,6 @@ orsf(pbc_orsf,
 
 orsf(pbc_orsf, 
      formula = time+status~., 
-     na_action = 'na_impute_meanmode',
      n_thread = 0, 
      n_tree = 5, 
      n_retry = 0,
@@ -58,5 +56,22 @@ verbose_fit <- orsf(pbc_orsf,
                     formula = time+status~. -id, 
                     n_tree = 5, 
                     verbose_progress = TRUE)
+
+
+## -----------------------------------------------------------------------------
+
+fit_spec <- orsf(pbc_orsf, 
+                 formula = time+status~. -id, 
+                 control = orsf_control_survival(method = 'net'), 
+                 n_tree = 2000,
+                 no_fit = TRUE)
+
+# how much time it takes to estimate training time:
+system.time(
+ time_est <- orsf_time_to_train(fit_spec, n_tree_subset = 5)
+)
+
+# the estimated training time:
+time_est
 
 

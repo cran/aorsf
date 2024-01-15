@@ -347,116 +347,82 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 article you will find a few tricks to prevent this bottleneck when using
 <code>orsf()</code>.</p>
 </div>
-<div id="use-orsf_control_fast" class="section level2">
-<h2>Use <code>orsf_control_fast()</code></h2>
-<p>This is the default <code>control</code> value for
-<code>orsf()</code> and its run-time compared to other approaches can be
-striking. For example:</p>
+<div id="dont-specify-a-control" class="section level2">
+<h2>Don’t specify a <code>control</code></h2>
+<p>The default <code>control</code> for <code>orsf()</code> is
+<code>NULL</code> because, if unspecified, <code>orsf()</code> will pick
+the fastest possible <code>control</code> for you depending on the type
+of forest being grown. The default <code>control</code> run-time
+compared to other approaches can be striking. For example:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>time_fast <span class="ot">&lt;-</span> <span class="fu">system.time</span>(</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a> <span class="at">expr =</span> <span class="fu">orsf</span>(pbc_orsf, </span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>             <span class="at">formula =</span> time<span class="sc">+</span>status<span class="sc">~</span>. <span class="sc">-</span>id, </span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>             <span class="at">control =</span> <span class="fu">orsf_control_fast</span>(), </span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>             <span class="at">n_tree =</span> <span class="dv">5</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>)</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>time_net <span class="ot">&lt;-</span> <span class="fu">system.time</span>(</span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a> <span class="at">expr =</span> <span class="fu">orsf</span>(pbc_orsf, </span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>             <span class="at">formula =</span> time<span class="sc">+</span>status<span class="sc">~</span>. <span class="sc">-</span>id, </span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>             <span class="at">control =</span> <span class="fu">orsf_control_net</span>(), </span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>             <span class="at">n_tree =</span> <span class="dv">5</span>)</span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>)</span>
-<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co"># control_fast() is much faster</span></span>
-<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>time_net[<span class="st">&#39;elapsed&#39;</span>] <span class="sc">/</span> time_fast[<span class="st">&#39;elapsed&#39;</span>]</span>
-<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; elapsed </span></span>
-<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt;     Inf</span></span></code></pre></div>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>             <span class="at">n_tree =</span> <span class="dv">5</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>time_net <span class="ot">&lt;-</span> <span class="fu">system.time</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a> <span class="at">expr =</span> <span class="fu">orsf</span>(pbc_orsf, </span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>             <span class="at">formula =</span> time<span class="sc">+</span>status<span class="sc">~</span>. <span class="sc">-</span>id, </span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>             <span class="at">control =</span> <span class="fu">orsf_control_survival</span>(<span class="at">method =</span> <span class="st">&#39;net&#39;</span>), </span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>             <span class="at">n_tree =</span> <span class="dv">5</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>)</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co"># unspecified control is much faster</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>time_net[<span class="st">&#39;elapsed&#39;</span>] <span class="sc">/</span> time_fast[<span class="st">&#39;elapsed&#39;</span>]</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; elapsed </span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt;     Inf</span></span></code></pre></div>
 </div>
 <div id="use-n_thread" class="section level2">
 <h2>Use <code>n_thread</code></h2>
 <p>The <code>n_thread</code> argument uses multi-threading to run
 <code>aorsf</code> functions in parallel when possible. If you know how
-many threads you want, e.g. you want exactly 5, just say
+many threads you want, e.g. you want exactly 5, set
 <code>n_thread = 5</code>. If you aren’t sure how many threads you have
-available but want to use as many as you can, say
-<code>n_thread = 0</code> and <code>aorsf</code> will figure out the
-number for you.</p>
+available but want to use a feasible amount, using
+<code>n_thread = 0</code> (the default) tells <code>aorsf</code> to do
+that for you.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a></span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># automatically pick number of threads based on amount available</span></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="fu">orsf</span>(pbc_orsf, </span>
 <span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>     <span class="at">formula =</span> time<span class="sc">+</span>status<span class="sc">~</span>. <span class="sc">-</span>id, </span>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>     <span class="at">n_tree =</span> <span class="dv">5</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>     <span class="at">n_thread =</span> <span class="dv">0</span>)</span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; ---------- Oblique random survival forest</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;      Linear combinations: Accelerated Cox regression</span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt;           N observations: 276</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt;                 N events: 111</span></span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt;                  N trees: 5</span></span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt;       N predictors total: 17</span></span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt;    N predictors per node: 5</span></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;  Average leaves per tree: 21</span></span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; Min observations in leaf: 5</span></span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt;       Min events in leaf: 1</span></span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt;           OOB stat value: 0.79</span></span>
-<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt;            OOB stat type: Harrell&#39;s C-statistic</span></span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt;      Variable importance: anova</span></span>
-<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; -----------------------------------------</span></span></code></pre></div>
-<p>Because R is a single threaded language, multi-threading cannot be
-applied when <code>orsf()</code> needs to call R functions from C++,
-which occurs when a customized R function is used to find linear
-combination of variables or compute prediction accuracy.</p>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>     <span class="at">n_thread =</span> <span class="dv">0</span>)</span></code></pre></div>
+<p>Note: sometimes multi-threading is not possible. For example, because
+R is a single threaded language, multi-threading cannot be applied when
+<code>orsf()</code> needs to call R functions from C++, which occurs
+when a customized R function is used to find linear combination of
+variables or compute prediction accuracy.</p>
 </div>
 <div id="do-less" class="section level2">
 <h2>Do less</h2>
-<p>There are some defaults in <code>orsf()</code> that can be adjusted
-to make it run faster:</p>
+<p>There are some inputs in <code>orsf()</code> that can be adjusted to
+make it run faster:</p>
 <ul>
-<li><p>set <code>n_retry</code> to 0 instead of 3 (the default)</p></li>
-<li><p>set <code>oobag_pred_type</code> to ‘none’ instead of ‘surv’ (the
-default)</p></li>
-<li><p>set ‘importance’ to ‘none’ instead of ‘anova’ (the
-default)</p></li>
+<li><p>set <code>n_retry</code> to <code>0</code></p></li>
+<li><p>set <code>oobag_pred_type</code> to <code>&#39;none&#39;</code></p></li>
+<li><p>set <code>importance</code> to <code>&#39;none&#39;</code></p></li>
 <li><p>increase <code>split_min_events</code>,
 <code>split_min_obs</code>, <code>leaf_min_events</code>, or
 <code>leaf_min_obs</code> to make trees stop growing sooner</p></li>
-<li><p>increase <code>split_min_stat</code> to make trees stop growing
-sooner</p></li>
+<li><p>increase <code>split_min_stat</code> to enforce more strict
+requirements for growing deeper trees.</p></li>
 </ul>
 <p>Applying these tips:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">orsf</span>(pbc_orsf, </span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>     <span class="at">formula =</span> time<span class="sc">+</span>status<span class="sc">~</span>., </span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>     <span class="at">na_action =</span> <span class="st">&#39;na_impute_meanmode&#39;</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>     <span class="at">n_thread =</span> <span class="dv">0</span>, </span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>     <span class="at">n_tree =</span> <span class="dv">5</span>, </span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>     <span class="at">n_retry =</span> <span class="dv">0</span>,</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>     <span class="at">oobag_pred_type =</span> <span class="st">&#39;none&#39;</span>, </span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>     <span class="at">importance =</span> <span class="st">&#39;none&#39;</span>,</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>     <span class="at">split_min_events =</span> <span class="dv">20</span>, </span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>     <span class="at">leaf_min_events =</span> <span class="dv">10</span>,</span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>     <span class="at">split_min_stat =</span> <span class="dv">10</span>)</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; ---------- Oblique random survival forest</span></span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;      Linear combinations: Accelerated Cox regression</span></span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;           N observations: 276</span></span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;                 N events: 111</span></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt;                  N trees: 5</span></span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt;       N predictors total: 18</span></span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt;    N predictors per node: 5</span></span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;  Average leaves per tree: 5.4</span></span>
-<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; Min observations in leaf: 5</span></span>
-<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt;       Min events in leaf: 10</span></span>
-<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;           OOB stat value: none</span></span>
-<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;            OOB stat type: none</span></span>
-<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt;      Variable importance: none</span></span>
-<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt; -----------------------------------------</span></span></code></pre></div>
-<p>While these default values do make <code>orsf()</code> run slower,
-they also usually make its predictions more accurate or make the fit
-easier to interpret.</p>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>     <span class="at">n_thread =</span> <span class="dv">0</span>, </span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>     <span class="at">n_tree =</span> <span class="dv">5</span>, </span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>     <span class="at">n_retry =</span> <span class="dv">0</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>     <span class="at">oobag_pred_type =</span> <span class="st">&#39;none&#39;</span>, </span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>     <span class="at">importance =</span> <span class="st">&#39;none&#39;</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>     <span class="at">split_min_events =</span> <span class="dv">20</span>, </span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>     <span class="at">leaf_min_events =</span> <span class="dv">10</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>     <span class="at">split_min_stat =</span> <span class="dv">10</span>)</span></code></pre></div>
+<p>While modifying these inputs can make <code>orsf()</code> run faster,
+they can also impact prediction accuracy.</p>
 </div>
 <div id="show-progress" class="section level2">
 <h2>Show progress</h2>
@@ -470,6 +436,29 @@ running less slow.</p>
 <span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                    <span class="at">verbose_progress =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Growing trees: 100%. </span></span>
 <span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; Computing predictions: 100%.</span></span></code></pre></div>
+</div>
+<div id="dont-wait.-estimate" class="section level2">
+<h2>Don’t wait. Estimate!</h2>
+<p>Instead of running a model and hoping it will be fast, you can
+estimate how long a specification of that model will take by using
+<code>no_fit = TRUE</code> in the call to <code>orsf()</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>fit_spec <span class="ot">&lt;-</span> <span class="fu">orsf</span>(pbc_orsf, </span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                 <span class="at">formula =</span> time<span class="sc">+</span>status<span class="sc">~</span>. <span class="sc">-</span>id, </span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                 <span class="at">control =</span> <span class="fu">orsf_control_survival</span>(<span class="at">method =</span> <span class="st">&#39;net&#39;</span>), </span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                 <span class="at">n_tree =</span> <span class="dv">2000</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>                 <span class="at">no_fit =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co"># how much time it takes to estimate training time:</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="fu">system.time</span>(</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a> time_est <span class="ot">&lt;-</span> <span class="fu">orsf_time_to_train</span>(fit_spec, <span class="at">n_tree_subset =</span> <span class="dv">5</span>)</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>)</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;    user  system elapsed </span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;    0.31    0.00    0.31</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co"># the estimated training time:</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>time_est</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; Time difference of 125.0233 secs</span></span></code></pre></div>
 </div>
 
 

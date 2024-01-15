@@ -25,28 +25,24 @@ Use regularized Cox proportional hazard models to identify linear
 combinations of input variables while fitting an \link{orsf} model.
 }
 \details{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#superseded}{\figure{lifecycle-superseded.svg}{options: alt='[Superseded]'}}}{\strong{[Superseded]}}
+
 \code{df_target} has to be less than \code{mtry}, which is a separate argument in
 \link{orsf} that indicates the number of variables chosen at random prior to
 finding a linear combination of those variables.
 }
-\examples{
-
-# orsf_control_net() is considerably slower than orsf_control_cph(),
-# The example uses n_tree = 25 so that my examples run faster,
-# but you should use at least 500 trees in applied settings.
-
-orsf(data = pbc_orsf,
-     formula = Surv(time, status) ~ . - id,
-     n_tree = 25,
-     control = orsf_control_net())
-}
 \references{
-Simon N, Friedman J, Hastie T, Tibshirani R. Regularization paths for Cox's proportional hazards model via coordinate descent. \emph{Journal of statistical software} 2011 Mar; 39(5):1. DOI: 10.18637/jss.v039.i05
+\enumerate{
+\item Simon, Noah, Friedman, Jerome, Hastie, Trevor, Tibshirani, Rob (2011).
+"Regularization paths for Cox's proportional hazards model via
+coordinate descent." \emph{Journal of statistical software}, \emph{39}(5), 1.
+}
 }
 \seealso{
 linear combination control functions
 \code{\link{orsf_control_cph}()},
 \code{\link{orsf_control_custom}()},
-\code{\link{orsf_control_fast}()}
+\code{\link{orsf_control_fast}()},
+\code{\link{orsf_control}()}
 }
 \concept{orsf_control}

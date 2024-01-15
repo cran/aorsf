@@ -85,7 +85,9 @@
 
   double find_best_cut();
 
-  virtual void sprout_leaf(arma::uword node_id);
+  void sprout_leaf(arma::uword node_id);
+
+  virtual void sprout_leaf_internal(arma::uword node_id) = 0;
 
   virtual double compute_max_leaves();
 
@@ -95,16 +97,33 @@
   void predict_leaf(Data* prediction_data,
                     bool oobag);
 
-  virtual void predict_value(arma::mat& pred_output,
-                             arma::vec& pred_denom,
-                             PredType pred_type,
-                             bool oobag) = 0;
+  void predict_leaf(Data* prediction_data,
+                    bool oobag,
+                    arma::vec& pd_x_vals,
+                    arma::uvec& pd_x_cols);
+
+  void predict_value(arma::mat& pred_output,
+                     arma::vec& pred_denom,
+                     PredType pred_type,
+                     bool oobag);
+
+  virtual arma::uword predict_value_internal(arma::uvec& pred_leaf_sort,
+                                             arma::mat& pred_output,
+                                             arma::vec& pred_denom,
+                                             PredType pred_type,
+                                             bool oobag) = 0;
 
   void negate_coef(arma::uword pred_col);
 
   void compute_oobag_vi(arma::vec* vi_numer, VariableImportance vi_type);
 
-  // void grow(arma::vec& vi_numer, arma::uvec& vi_denom);
+  void compute_dependence(Data* prediction_data,
+                          std::vector<std::vector<arma::mat>>& result,
+                          PartialDepType pd_type,
+                          std::vector<arma::mat>& pd_x_vals,
+                          std::vector<arma::uvec>& pd_x_cols,
+                          arma::vec& oobag_denom,
+                          bool oobag);
 
   std::vector<arma::uvec>& get_coef_indices() {
    return(coef_indices);
@@ -210,6 +229,14 @@
 
   void find_rows_inbag(arma::uword n_obs);
 
+  virtual arma::mat glm_fit();
+  virtual arma::mat glmnet_fit();
+  virtual arma::mat user_fit();
+
+  virtual uword get_n_col_vi()=0;
+
+  virtual void predict_value_vi(arma::mat& pred_values)=0;
+
  protected:
 
   void resize_oobag_data();
@@ -217,6 +244,11 @@
   // pointers to variable importance in forest
   arma::vec* vi_numer;
   arma::uvec* vi_denom;
+
+  // // pointers to partial dependence inputs in forest
+  // PartialDepType pd_type;
+  // std::vector<arma::mat>* pd_x_vals;
+  // std::vector<arma::uvec>* pd_x_cols;
 
   // Pointer to original data
   Data* data;
@@ -339,10 +371,9 @@
   // leaf values (only in leaf nodes)
   std::vector<double> leaf_summary;
 
+  virtual double compute_prediction_accuracy(arma::mat& preds);
 
-  virtual double compute_prediction_accuracy(arma::vec& preds);
-
-  virtual double compute_prediction_accuracy_internal(arma::vec& preds) = 0;
+  virtual double compute_prediction_accuracy_internal(arma::mat& preds) = 0;
 
  };
 

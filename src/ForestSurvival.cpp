@@ -97,9 +97,10 @@ void ForestSurvival::plant() {
 
 }
 
-void ForestSurvival::resize_pred_mat_internal(arma::mat& p){
+void ForestSurvival::resize_pred_mat_internal(arma::mat& p,
+                                              arma::uword n){
 
-  p.zeros(data->n_rows, pred_horizon.size());
+  p.zeros(n, pred_horizon.size());
 
 }
 
@@ -156,37 +157,38 @@ void ForestSurvival::resize_oobag_eval(){
 
 }
 
-void ForestSurvival::compute_prediction_accuracy(arma::mat& y,
-                                                 arma::vec& w,
-                                                 arma::mat& predictions,
-                                                 arma::uword row_fill){
-
- bool pred_is_risklike = true;
-
- if(pred_type == PRED_SURVIVAL) pred_is_risklike = false;
-
+void ForestSurvival::compute_prediction_accuracy_internal(
+  arma::mat& y,
+  arma::vec& w,
+  arma::mat& predictions,
+  arma::uword row_fill
+) {
 
  if(oobag_eval_type == EVAL_R_FUNCTION){
 
- // initialize function from tree object
- // (Functions can't be stored in C++ classes, but Robjects can)
-  Function f_oobag_eval = as<Function>(oobag_R_function);
-  NumericMatrix y_ = wrap(y);
-  NumericVector w_ = wrap(w);
+  // initialize function from tree object
+  // (Functions can't be stored in C++ classes, but Robjects can)
+  Rcpp::Function f_oobag_eval = Rcpp::as<Rcpp::Function>(oobag_R_function);
+  Rcpp::NumericMatrix y_ = Rcpp::wrap(y);
+  Rcpp::NumericVector w_ = Rcpp::wrap(w);
 
-  for(arma::uword i = 0; i < oobag_eval.n_cols; ++i){
-   vec p = predictions.col(i);
-   NumericVector p_ = wrap(p);
-   NumericVector R_result = f_oobag_eval(y_, w_, p_);
+  for(uword i = 0; i < oobag_eval.n_cols; ++i){
+   vec p = predictions.unsafe_col(i);
+   Rcpp::NumericVector p_ = Rcpp::wrap(p);
+   Rcpp::NumericVector R_result = f_oobag_eval(y_, w_, p_);
    oobag_eval(row_fill, i) = R_result[0];
   }
   return;
  }
 
+ bool pred_is_risklike = true;
+ if(pred_type == PRED_SURVIVAL || pred_type == PRED_TIME){
+  pred_is_risklike = false;
+ }
 
  for(arma::uword i = 0; i < oobag_eval.n_cols; ++i){
-  vec p = predictions.unsafe_col(i);
-  oobag_eval(row_fill, i) = compute_cstat(y, w, p, pred_is_risklike);
+  vec p = predictions.col(i);
+  oobag_eval(row_fill, i) = compute_cstat_surv(y, w, p, pred_is_risklike);
  }
 
 

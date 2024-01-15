@@ -2,38 +2,49 @@
 % Please edit documentation in R/orsf_summary.R
 \name{orsf_summarize_uni}
 \alias{orsf_summarize_uni}
-\title{ORSF summary; univariate}
+\title{Univariate summary}
 \usage{
 orsf_summarize_uni(
   object,
   n_variables = NULL,
   pred_horizon = NULL,
-  pred_type = "risk",
-  importance = "negate",
+  pred_type = NULL,
+  importance = NULL,
+  verbose_progress = FALSE,
   ...
 )
 }
 \arguments{
-\item{object}{(\emph{orsf_fit}) a trained oblique random survival forest
-(see \link{orsf}).}
+\item{object}{(\emph{ObliqueForest}) a trained oblique random forest object (see \link{orsf}).}
 
 \item{n_variables}{(\emph{integer}) how many variables should be summarized?
 Setting this input to a lower number will reduce computation time.}
 
-\item{pred_horizon}{(\emph{double}) a value or vector indicating the time(s)
-that predictions will be calibrated to. E.g., if you were predicting
-risk of incident heart failure within the next 10 years, then
-\code{pred_horizon = 10}. \code{pred_horizon} can be \code{NULL} if \code{pred_type} is
-\code{'mort'}, since mortality predictions are aggregated over all
-event times}
+\item{pred_horizon}{(\emph{double}) Only relevent for survival forests.
+A value or vector indicating the time(s) that predictions will be
+calibrated to. E.g., if you were predicting risk of incident heart
+failure within the next 10 years, then \code{pred_horizon = 10}.
+\code{pred_horizon} can be \code{NULL} if \code{pred_type} is \code{'mort'}, since
+mortality predictions are aggregated over all event times}
 
 \item{pred_type}{(\emph{character}) the type of predictions to compute. Valid
-options are
+Valid options for survival are:
 \itemize{
 \item 'risk' : probability of having an event at or before \code{pred_horizon}.
 \item 'surv' : 1 - risk.
 \item 'chf': cumulative hazard function
 \item 'mort': mortality prediction
+\item 'time': survival time prediction
+}
+
+For classification:
+\itemize{
+\item 'prob': probability for each class
+}
+
+For regression:
+\itemize{
+\item 'mean': predicted mean, i.e., the expected value
 }}
 
 \item{importance}{(\emph{character}) Indicate method for variable importance:
@@ -45,6 +56,10 @@ options are
 }
 
 For details on these methods, see \link{orsf_vi}.}
+
+\item{verbose_progress}{(\emph{logical}) if \code{TRUE}, progress will be
+printed to console. If \code{FALSE} (the default), nothing will be
+printed.}
 
 \item{...}{Further arguments passed to or from other methods (not currently used).}
 }
@@ -73,17 +88,17 @@ by setting importance = 'none'.
 
 object <- orsf(pbc_orsf, Surv(time, status) ~ . - id, n_tree = 25)
 
-# since anova importance was used to make object, we can
-# safely say importance = 'none' and skip computation of
-# variable importance while running orsf_summarize_uni
+# since anova importance was used to make object, it is also
+# used for ranking variables in the summary, unless we specify
+# a different type of importance
 
-orsf_summarize_uni(object, n_variables = 3, importance = 'none')
+orsf_summarize_uni(object, n_variables = 2)
 
-# however, if we want to summarize object according to variables
-# ranked by negation importance, we can compute negation importance
-# within orsf_summarize_uni() as follows:
+# if we want to summarize object according to variables
+# ranked by negation importance, we can compute negation
+# importance within orsf_summarize_uni() as follows:
 
-orsf_summarize_uni(object, n_variables = 3, importance = 'negate')
+orsf_summarize_uni(object, n_variables = 2, importance = 'negate')
 
 
 }

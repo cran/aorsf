@@ -14,18 +14,22 @@ roxy_data_allowed <- function(){
  )
 }
 
+# Oblique Forest descriptor -----------------------------------------------
+
+roxy_describe_ObliqueForest <- function(trained){
+ paste("(*ObliqueForest*)",
+       if(trained) "a trained" else "an",
+       "oblique random forest object (see [orsf])")
+}
+
+
 # multi-threading ---------------------------------------------------------
 
 roxy_n_thread_header <- function(action){
  paste("(_integer_) number of threads to use while ",
-       action, ". Default is one thread. ",
-       "To use the maximum number of threads that ",
-       "your system provides for concurrent execution, ",
-       "set `n_thread = 0`.", sep = "")
-}
-
-roxy_n_thread_details <- function(){
- "(_integer_) number of threads to use. Default is one thread."
+       action, ". Default is 0, which allows a suitable",
+       " number of threads to be used based on availability.",
+       sep = "")
 }
 
 # importance --------------------------------------------------------------
@@ -60,11 +64,13 @@ roxy_oobag_fun_header <- function(){
 }
 
 roxy_oobag_fun_default <- function(
-  stat_label = "Harrell's C-statistic (1982)"
+  stat_label = c("- survival: Harrell's C-statistic (1982)",
+                 "- classification: Area underneath the ROC curve (AUC-ROC)",
+                 "- regression: Traditional prediction R-squared")
 ){
-  paste("When `oobag_fun = NULL` (the default),",
-        stat_label,
-        "is used to evaluate accuracy.")
+  paste("When `oobag_fun = NULL` (the default), the evaluation",
+        "statistic is selected based on tree type\n\n",
+        paste(stat_label, collapse = '\n'))
  }
 
 roxy_oobag_fun_user <- function(){
@@ -72,15 +78,23 @@ roxy_oobag_fun_user <- function(){
 }
 
 roxy_oobag_fun_inputs <- function(){
- "`oobag_fun` should have two inputs: `y_mat` and `s_vec`"
+ "`oobag_fun` should have three inputs: `y_mat`, `w_vec`, and `s_vec`"
 }
 
 roxy_oobag_fun_ymat <- function(){
-  "`y_mat` is a two column matrix with first column named 'time', second named 'status'"
+  paste("For survival trees, `y_mat` should be a two column matrix with",
+  "first column named 'time' and second named 'status'. For classification",
+  "trees, `y_mat` should be a matrix with number of columns = number of",
+  "distinct classes in the outcome. For regression, `y_mat` should be a",
+  "matrix with one column.")
 }
 
 roxy_oobag_fun_svec <- function(){
- "`s_vec` is a numeric vector containing predicted survival probabilities."
+ "`s_vec` is a numeric vector containing predictions"
+ # paste("`s_vec` is a numeric vector containing predictions. For survival,",
+ #       "the number of columns should match the length of `oobag_pred_horison`.",
+ #       "For classification, the number of columns should match the number of",
+ #       "classes. For regression, the number of columns should be 1." )
 }
 
 
@@ -121,140 +135,6 @@ roxy_na_action_impute_meanmode <- function(data_label){
  paste0(
   "'impute_meanmode' : missing values for continuous and categorical variables in `", data_label,"` will be imputed using the mean and mode, respectively"
  )
-}
-
-
-# citations ---------------------------------------------------------------
-
-
-
-roxy_cite <- function(authors,
-                      title,
-                      journal,
-                      date,
-                      number=NULL,
-                      doi=NULL,
-                      url=NULL){
-
- if(!is.null(number)) number <- paste0('; ', number)
- if(!is.null(doi)) doi <- paste(" DOI:", doi)
- if(!is.null(url)) url <- paste(" URL:", url)
-
- ending <- paste(c(doi, url), collapse = '.')
-
- paste0(
-  authors, '. ',
-  title, '. ',
-  '*', journal, '* ',
-  date,
-  number, '.',
-  ending
- )
-}
-
-roxy_cite_breiman_2001 <- function(){
-
- roxy_cite(
-  authors = "Breiman L",
-  title = "Random forests",
-  journal = "Machine learning",
-  date = "2001 Oct",
-  number = "45(1):5-32",
-  doi = "10.1023/A:1010933404324"
- )
-
-}
-
-roxy_cite_ishwaran_2008 <- function(){
-
- roxy_cite(
-  authors = "Ishwaran H, Kogalur UB, Blackstone EH, Lauer MS",
-  title = "Random survival forests",
-  journal = "Annals of applied statistics",
-  date = "2008 Sep",
-  number = "2(3):841-60",
-  doi = "10.1214/08-AOAS169"
- )
-
-}
-
-roxy_cite_jaeger_2019 <- function(){
-
- roxy_cite(
-  authors = "Jaeger BC, Long DL, Long DM, Sims M, Szychowski JM, Min YI, Mcclure LA, Howard G, Simon N",
-  title = "Oblique random survival forests",
-  journal = "Annals of applied statistics",
-  date = "2019 Sep",
-  number = "13(3):1847-83",
-  doi = "10.1214/19-AOAS1261"
- )
-
-}
-
-roxy_cite_jaeger_2023 <- function(){
-
- roxy_cite(
-  authors = "Jaeger BC, Welden S, Lenoir K, Speiser JL, Segar MW, Pandey A, Pajewski NM",
-  title = "Accelerated and interpretable oblique random survival forests",
-  journal = "Journal of Computational and Graphical Statistics",
-  date = "Published online 08 Aug 2023",
-  number = NULL,
-  doi = "10.1080/10618600.2023.2231048"
-  # url = "https://doi.org/10.1080/10618600.2023.2231048"
- )
-
-}
-
-roxy_cite_hooker_2021 <- function(){
-
- roxy_cite(
-  authors = "Giles Hooker, Lucas Mentch, Siyu Zhou",
-  title = "Unrestricted Permutation forces Extrapolation: Variable Importance Requires at least One More Model, or There Is No Free Variable Importance",
-  journal = "arXiv e-prints",
-  date = "2021 Oct",
-  number = 'arXiv-1905',
-  url = "https://doi.org/10.48550/arXiv.1905.03151"
- )
-
-}
-
-roxy_cite_harrell_1982 <- function(){
-
- roxy_cite(
-  authors = "Harrell FE, Califf RM, Pryor DB, Lee KL, Rosati RA",
-  title = "Evaluating the Yield of Medical Tests",
-  journal = "JAMA",
-  date = "1982",
-  number = '247(18):2543-2546',
-  doi = "10.1001/jama.1982.03320430047030"
- )
-
-}
-
-roxy_cite_menze_2011 <- function(){
-
- roxy_cite(
-  authors = "Menze BH, Kelm BM, Splitthoff DN, Koethe U, Hamprecht FA",
-  title = "On oblique random forests",
-  journal = "Joint European Conference on Machine Learning and Knowledge Discovery in Databases",
-  date = "2011 Sep 4",
-  number = 'pp. 453-469',
-  doi = "10.1007/978-3-642-23783-6_29"
- )
-
-}
-
-roxy_cite_simon_2011 <- function(){
-
- roxy_cite(
-  authors = "Simon N, Friedman J, Hastie T, Tibshirani R",
-  title = "Regularization paths for Cox's proportional hazards model via coordinate descent",
-  journal = "Journal of statistical software",
-  date = "2011 Mar",
-  number = '39(5):1',
-  doi = "10.18637/jss.v039.i05"
- )
-
 }
 
 

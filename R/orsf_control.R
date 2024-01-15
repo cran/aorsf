@@ -36,21 +36,22 @@
 #'  on the scale of your data, which is why the default value is `TRUE`.
 #'
 #'
-#' @examples
-#'
-#' orsf(data = pbc_orsf,
-#'      formula = Surv(time, status) ~ . - id,
-#'      control = orsf_control_fast())
 #'
 orsf_control_fast <- function(method = 'efron',
                               do_scale = TRUE,
                               ...){
 
+ lifecycle::deprecate_warn(
+  when = "0.1.2",
+  "orsf_control_fast()",
+  details = "Please use the appropriate survival, classification, or regression control function instead. E.g., `orsf_control_survival(method = 'fast')`"
+ )
+
  check_dots(list(...), orsf_control_fast)
 
  method <- tolower(method)
 
- check_control_cph(method = method, do_scale = do_scale)
+ # check_control_cph(method = method, do_scale = do_scale)
 
  ties_method <- method
 
@@ -72,6 +73,8 @@ orsf_control_fast <- function(method = 'efron',
 #'  to create linear combinations of predictor variables
 #'  while fitting an [orsf] model.
 #'
+#' `r lifecycle::badge('superseded')`
+#'
 #' @inheritParams orsf_control_fast
 #'
 #' @param eps (_double_) When using Newton Raphson scoring to identify
@@ -84,6 +87,7 @@ orsf_control_fast <- function(method = 'efron',
 #' @param iter_max (_integer_) iteration continues until convergence
 #'   (see `eps` above) or the number of attempted iterations is equal to
 #'   `iter_max`.
+#'
 #'
 #' @return an object of class `'orsf_control'`, which should be used as
 #'  an input for the `control` argument of [orsf].
@@ -106,25 +110,25 @@ orsf_control_fast <- function(method = 'efron',
 #'   Data: Extending the Cox Model. Statistics for Biology and Health.
 #'   Springer, New York, NY. DOI: 10.1007/978-1-4757-3294-8_3
 #'
-#' @examples
-#'
-#' orsf(data = pbc_orsf,
-#'      formula = Surv(time, status) ~ . - id,
-#'      control = orsf_control_cph())
 #'
 orsf_control_cph <- function(method = 'efron',
                              eps = 1e-9,
                              iter_max = 20,
                              ...){
 
+ lifecycle::deprecate_warn(
+  when = "0.1.2",
+  "orsf_control_cph()",
+  details = "Please use the appropriate survival, classification, or regression control function instead. E.g., `orsf_control_survival(method = 'glm')`"
+ )
 
  method <- tolower(method)
 
  check_dots(list(...), orsf_control_cph)
 
- check_control_cph(method = method,
-                   eps = eps,
-                   iter_max = iter_max)
+ # check_control_cph(method = method,
+ #                   eps = eps,
+ #                   iter_max = iter_max)
 
  ties_method <- method
 
@@ -144,6 +148,8 @@ orsf_control_cph <- function(method = 'efron',
 #' Use regularized Cox proportional hazard models to identify linear
 #'   combinations of input variables while fitting an [orsf] model.
 #'
+#' `r lifecycle::badge('superseded')`
+#'
 #' @param alpha (_double_) The elastic net mixing parameter. A value of 1 gives the
 #'  lasso penalty, and a value of 0 gives the ridge penalty. If multiple
 #'  values of alpha are given, then a penalized model is fit using each
@@ -152,6 +158,7 @@ orsf_control_cph <- function(method = 'efron',
 #' @param df_target (_integer_) Preferred number of variables used in a linear combination.
 #'
 #' @param ... `r roxy_dots()`
+#'
 #'
 #' @inherit orsf_control_cph return
 #'
@@ -167,27 +174,21 @@ orsf_control_cph <- function(method = 'efron',
 #'
 #' @references
 #'
-#' `r roxy_cite_simon_2011()`
+#' 1. `r cite("simon_2011")`
 #'
-#'
-#'
-#' @examples
-#'
-#' # orsf_control_net() is considerably slower than orsf_control_cph(),
-#' # The example uses n_tree = 25 so that my examples run faster,
-#' # but you should use at least 500 trees in applied settings.
-#'
-#' orsf(data = pbc_orsf,
-#'      formula = Surv(time, status) ~ . - id,
-#'      n_tree = 25,
-#'      control = orsf_control_net())
 
 orsf_control_net <- function(alpha = 1/2,
                              df_target = NULL,
                              ...){
 
+ lifecycle::deprecate_warn(
+  when = "0.1.2",
+  "orsf_control_net()",
+  details = "Please use the appropriate survival, classification, or regression control function instead. E.g., `orsf_control_survival(method = 'net')`"
+ )
+
  check_dots(list(...), orsf_control_net)
- check_control_net(alpha, df_target)
+ # check_control_net(alpha, df_target)
 
  orsf_control(tree_type = 'unknown',
               method = 'net',
@@ -201,6 +202,8 @@ orsf_control_net <- function(alpha = 1/2,
 }
 
 #' Custom ORSF control
+#'
+#' `r lifecycle::badge('superseded')`
 #'
 #' @param beta_fun (_function_) a function to define coefficients used
 #'  in linear combinations of predictor variables. `beta_fun` must accept
@@ -219,16 +222,22 @@ orsf_control_net <- function(alpha = 1/2,
 #'
 #' @inherit orsf_control_cph return
 #'
+#'
 #' @export
+#'
 #'
 #' @family orsf_control
 #'
-#' @includeRmd Rmd/orsf_control_custom_examples.Rmd
 
 orsf_control_custom <- function(beta_fun, ...){
 
+ lifecycle::deprecate_warn(
+  when = "0.1.2",
+  "orsf_control_custom()",
+  details = "Please use the appropriate survival, classification, or regression control function instead. E.g., `orsf_control_survival(method = your_function)`, noting that your_function is a function object and not a character value"
+ )
+
  check_dots(list(...), .f = orsf_control_custom)
- check_beta_fun(beta_fun)
 
  orsf_control(tree_type = 'unknown',
               method = beta_fun,
@@ -305,7 +314,7 @@ orsf_control_custom <- function(beta_fun, ...){
 #'
 #' @param ... `r roxy_dots()`
 #'
-#' @noRd
+#' @family orsf_control
 #'
 #' @details
 #'
@@ -327,7 +336,9 @@ orsf_control_custom <- function(beta_fun, ...){
 #' - `lincomb_ties_method`: method for ties in survival time
 #' - `lincomb_R_function`: R function for custom splits
 #'
+#' @export
 #'
+#' @includeRmd Rmd/orsf_control_examples.Rmd
 #'
 orsf_control <- function(tree_type,
                          method,
@@ -339,15 +350,119 @@ orsf_control <- function(tree_type,
                          epsilon,
                          ...){
 
+ check_arg_type(arg_value = method,
+                arg_name = 'method',
+                expected_type = c('character', 'function'))
+
  custom <- is.function(method)
 
- if(custom){
-  lincomb_R_function <- method
- } else if (method == 'net') {
-  lincomb_R_function <- penalized_cph
- } else {
-  lincomb_R_function <- function(x) x
+ if(!custom){
+
+  check_arg_is_valid(arg_value = method,
+                     arg_name = 'method',
+                     valid_options = c("glm", "net", "fast"))
+
+  check_arg_length(arg_value = method,
+                   arg_name = 'method',
+                   expected_length = 1)
+
  }
+
+ # checking of custom functions is done when orsf object is initialized
+
+ check_arg_type(arg_value = scale_x,
+                arg_name = 'scale_x',
+                expected_type = 'logical')
+
+ check_arg_length(arg_value = scale_x,
+                  arg_name = 'scale_x',
+                  expected_length = 1)
+
+ if(!is.null(ties)){
+
+  check_arg_type(arg_value = ties,
+                 arg_name = 'ties',
+                 expected_type = 'character')
+
+  check_arg_is_valid(arg_value = ties,
+                     arg_name = 'ties',
+                     valid_options = c("breslow", "efron"))
+
+ }
+
+ check_arg_type(arg_value = net_mix,
+                arg_name = 'net_mix',
+                expected_type = 'numeric')
+
+ check_arg_gteq(arg_value = net_mix,
+                arg_name = 'net_mix',
+                bound = 0)
+
+ check_arg_lteq(arg_value = net_mix,
+                arg_name = 'net_mix',
+                bound = 1)
+
+ check_arg_length(arg_value = net_mix,
+                  arg_name = 'net_mix',
+                  expected_length = 1)
+
+ if(!is.null(target_df)){
+
+  check_arg_type(arg_value = target_df,
+                 arg_name = 'target_df',
+                 expected_type = 'numeric')
+
+  check_arg_is_integer(arg_value = target_df,
+                       arg_name = 'target_df')
+
+ }
+
+
+ check_arg_type(arg_value = max_iter,
+                arg_name = 'max_iter',
+                expected_type = 'numeric')
+
+ check_arg_is_integer(arg_value = max_iter,
+                      arg_name = 'max_iter')
+
+ check_arg_gteq(arg_value = max_iter,
+                arg_name = 'max_iter',
+                bound = 1)
+
+ check_arg_length(arg_value = max_iter,
+                  arg_name = 'max_iter',
+                  expected_length = 1)
+
+ check_arg_type(arg_value = epsilon,
+                arg_name = 'epsilon',
+                expected_type = 'numeric')
+
+ check_arg_gt(arg_value = epsilon,
+              arg_name = 'epsilon',
+              bound = 0)
+
+ check_arg_length(arg_value = epsilon,
+                  arg_name = 'epsilon',
+                  expected_length = 1)
+
+ if(custom){
+
+  lincomb_R_function <- method
+
+ } else if (method == 'net') {
+
+  lincomb_R_function <- switch(tree_type,
+                               'survival' = penalized_cph,
+                               'classification' = penalized_logreg,
+                               'regression' = penalized_linreg,
+                               'unknown' = 'unknown')
+
+ } else {
+
+  lincomb_R_function <- NULL
+
+ }
+
 
  structure(
   .Data = list(
@@ -367,7 +482,8 @@ orsf_control <- function(tree_type,
 
 }
 
-
+#' @rdname orsf_control
+#' @export
 orsf_control_classification <- function(method = 'glm',
                                         scale_x = TRUE,
                                         net_mix = 0.5,
@@ -390,7 +506,8 @@ orsf_control_classification <- function(method = 'glm',
 
 }
 
-
+#' @rdname orsf_control
+#' @export
 orsf_control_regression <- function(method = 'glm',
                                     scale_x = TRUE,
                                     net_mix = 0.5,
@@ -413,7 +530,8 @@ orsf_control_regression <- function(method = 'glm',
 
 }
 
-
+#' @rdname orsf_control
+#' @export
 orsf_control_survival <- function(method = 'glm',
                                   scale_x = TRUE,
                                   ties = 'efron',

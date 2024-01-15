@@ -74,16 +74,21 @@ public:
            uint n_thread,
            int verbosity);
 
- // Grow or predict
- // void run(bool verbose, bool oobag);
-
- virtual void compute_prediction_accuracy(
+ // this function funnels inputs to the function below
+ void compute_prediction_accuracy(
    Data*       prediction_data,
    arma::mat&  prediction_values,
    arma::uword row_fill
  );
 
- virtual void compute_prediction_accuracy(
+ void compute_prediction_accuracy(
+   arma::mat& y,
+   arma::vec& w,
+   arma::mat& predictions,
+   arma::uword row_fill
+ );
+
+ virtual void compute_prediction_accuracy_internal(
    arma::mat& y,
    arma::vec& w,
    arma::mat& predictions,
@@ -188,6 +193,10 @@ public:
   return(vi_denom);
  }
 
+ arma::vec& get_oobag_denom(){
+  return(oobag_denom);
+ }
+
  arma::mat& get_oobag_eval(){
   return(oobag_eval);
  }
@@ -209,6 +218,20 @@ public:
  arma::mat predict(bool oobag);
 
  std::vector<std::vector<arma::mat>> compute_dependence(bool oobag);
+
+ void compute_dependence_single_thread(
+   Data* prediction_data,
+   bool oobag,
+   std::vector<std::vector<arma::mat>>& result
+ );
+
+ void compute_dependence_multi_thread(
+   uint thread_idx,
+   Data* prediction_data,
+   bool oobag,
+   std::vector<std::vector<arma::mat>>& result_ptr,
+   arma::vec& denom_ptr
+ );
 
 protected:
 
@@ -239,9 +262,11 @@ protected:
 
  void show_progress(std::string operation, size_t max_progress);
 
- virtual void resize_pred_mat(arma::mat& p);
+ virtual void resize_pred_mat(arma::mat& p, arma::uword n);
 
- virtual void resize_pred_mat_internal(arma::mat& p) = 0;
+ virtual void resize_pd_mats(std::vector<std::vector<arma::mat>>& mat_list);
+
+ virtual void resize_pred_mat_internal(arma::mat& p, arma::uword n) = 0;
 
  arma::uword find_max_eval_steps();
 
@@ -306,12 +331,12 @@ protected:
  arma::vec pd_probs;
 
  // out-of-bag
- bool        oobag_pred;
- arma::vec   oobag_denom;
- arma::mat   oobag_eval;
- EvalType    oobag_eval_type;
- arma::uword oobag_eval_every;
- Rcpp::RObject     oobag_R_function;
+ bool          oobag_pred;
+ arma::vec     oobag_denom;
+ arma::mat     oobag_eval;
+ EvalType      oobag_eval_type;
+ arma::uword   oobag_eval_every;
+ Rcpp::RObject oobag_R_function;
 
 
  // multi-threading

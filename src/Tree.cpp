@@ -59,10 +59,8 @@
  pred_type(DEFAULT_PRED_TYPE),
  vi_type(VI_NONE),
  vi_max_pvalue(DEFAULT_ANOVA_VI_PVALUE),
- // leaf_min_events(DEFAULT_LEAF_MIN_EVENTS),
  leaf_min_obs(DEFAULT_LEAF_MIN_OBS),
  split_rule(DEFAULT_SPLITRULE),
- // split_min_events(DEFAULT_SPLIT_MIN_EVENTS),
  split_min_obs(DEFAULT_SPLIT_MIN_OBS),
  split_min_stat(DEFAULT_SPLIT_MIN_STAT),
  split_max_cuts(DEFAULT_SPLIT_MAX_CUTS),
@@ -121,7 +119,7 @@
   random_number_generator.seed(seed);
 
   this->data = data;
-  this->n_cols_total = data->n_cols;
+  this->n_cols_total = data->n_cols_x;
   this->n_rows_total = data->n_rows;
   this->seed = seed;
   this->mtry = mtry;
@@ -229,9 +227,11 @@
   uword mtry_safe = find_safe_mtry();
 
   if(mtry_safe == 0){
+   // empty cols_node indicates not to proceed with grow()
    cols_node.resize(0);
    return;
   }
+
 
   // Set all to not selected
   std::vector<bool> temp;
@@ -298,19 +298,14 @@
 
  }
 
- // not currently used but will be in the future
- // # nocov start
  bool Tree::is_col_splittable(uword j){
 
-  uvec::iterator i;
-
-  // initialize as 0 but do not make comparisons until x_first_value
-  // is formally defined at the first instance of status == 1
+  // initialize as 0, do not compare until x_first_value is defn.
   double x_first_value=0;
 
   bool x_first_undef = true;
 
-  for (i = rows_node.begin(); i != rows_node.end(); ++i) {
+  for (uvec::iterator i = rows_node.begin(); i != rows_node.end(); ++i) {
 
    if(x_first_undef){
 
@@ -339,7 +334,7 @@
   return(false);
 
  }
- // # nocov end
+
 
  bool Tree::is_node_splittable(uword node_id){
 
@@ -377,7 +372,6 @@
  // # nocov end
 
  // not currently used but will be in the future
- // # nocov start
  void Tree::find_all_cuts(){
 
   // assume no valid cutpoints at first
@@ -396,7 +390,7 @@
 
    // If we want to make the current value of lincomb a cut-point, we need
    // to make sure the next value of lincomb isn't equal to this current value.
-   // Otherwise, we will have the same value of lincomb in both groups!
+   // Otherwise, we will have the same value of lincomb in both groups.
 
    if(lincomb[*it] != lincomb[*(it+1)]){
 
@@ -498,8 +492,7 @@
   i = 0;
   uvec output_middle(k-j);
 
-  for(it = it_min+1;
-      it < it_max; ++it){
+  for(it = it_min+1; it < it_max; ++it){
    if(lincomb[*it] != lincomb[*(it+1)]){
     output_middle[i] = it - lincomb_sort.begin();
     i++;
@@ -514,7 +507,6 @@
   cuts_all = join_vert(output_left, output_middle, output_right);
 
  }
- // # nocov end
 
  double Tree::find_best_cut(){
 
@@ -581,7 +573,6 @@
  }
 
  uword Tree::find_safe_mtry(){
-  // only relevant for survival trees at the moment
   return(this->mtry);
  }
 
@@ -622,8 +613,6 @@
 
  }
 
- // not currently used but will be in the future
- // # nocov start
  void Tree::sprout_leaf(uword node_id){
 
   if(verbosity > 2){
@@ -633,10 +622,9 @@
    Rcout << std::endl;
   }
 
-  leaf_summary[node_id] = mean(y_node.col(0));
+  sprout_leaf_internal(node_id);
 
  }
- // # nocov end
 
  // not currently used but will be in the future
  // # nocov start
@@ -654,8 +642,6 @@
  }
  // # nocov end
 
- // not currently used but will be in the future
- // # nocov start
  double Tree::compute_max_leaves(){
 
   // find maximum number of leaves for this tree
@@ -672,7 +658,6 @@
   return(max_leaves);
 
  }
- // # nocov end
 
  void Tree::compute_oobag_vi(arma::vec* vi_numer,
                              VariableImportance vi_type) {
@@ -685,20 +670,18 @@
   // using oobag = false for predict b/c data_oobag is already subsetted
   predict_leaf(data_oobag.get(), false);
 
-  vec pred_values(data_oobag->n_rows);
+  mat pred_values(data_oobag->n_rows, get_n_col_vi());
 
-  for(uword i = 0; i < pred_values.size(); ++i){
-   pred_values[i] = leaf_summary[pred_leaf[i]];
-  }
+  predict_value_vi(pred_values);
 
-  // Compute normal prediction accuracy for each tree. Predictions already computed..
+  // Compute normal prediction accuracy.
   double accuracy_normal = compute_prediction_accuracy(pred_values);
 
   if(verbosity > 1){
    // # nocov start
-   Rcout << "  -- prediction accuracy before noising: ";
+   Rcout << "   -- prediction accuracy before noising: ";
    Rcout << accuracy_normal << std::endl;
-   Rcout << "  -- mean leaf pred: ";
+   Rcout << "   -- mean leaf pred: ";
    Rcout << mean(conv_to<vec>::from(pred_leaf));
    Rcout << std::endl << std::endl;
    // # nocov end
@@ -707,7 +690,7 @@
   random_number_generator.seed(seed);
 
   // Randomly permute for all independent variables
-  for (uword pred_col = 0; pred_col < data->get_n_cols(); ++pred_col) {
+  for (uword pred_col = 0; pred_col < data->get_n_cols_x(); ++pred_col) {
 
    // Check whether the i-th variable is used in the tree:
    bool pred_is_used = false;
@@ -733,9 +716,7 @@
 
     predict_leaf(data_oobag.get(), false);
 
-    for(uword i = 0; i < pred_values.size(); ++i){
-     pred_values[i] = leaf_summary[pred_leaf[i]];
-    }
+    predict_value_vi(pred_values);
 
     double accuracy_permuted = compute_prediction_accuracy(pred_values);
 
@@ -762,6 +743,77 @@
    }
   }
  }
+
+ void Tree::compute_dependence(Data* prediction_data,
+                               std::vector<std::vector<arma::mat>>& result,
+                               PartialDepType pd_type,
+                               std::vector<arma::mat>& pd_x_vals,
+                               std::vector<arma::uvec>& pd_x_cols,
+                               arma::vec& oobag_denom,
+                               bool oobag) {
+
+  // a spec is a mat of x-values and umat of x-columns
+  // e.g., x_vals = c(1,2,3) and x_cols = c(1,1,1)
+
+  // an item is a specific row of a spec
+  // e.g., x_vals = 2, x_cols = 1
+
+  // mat_list
+  // -- mat_list[[i]] = vector of mats
+  // -- each mat corresponds to 1 item in spec i
+
+  uword n_specs = pd_x_vals.size();
+
+  if(verbosity > 3){
+   Rcout << "   -- n specs: " << n_specs << std::endl;
+  }
+
+  for(uword k = 0; k < n_specs; ++k){
+
+   uword n_items = pd_x_vals[k].n_rows;
+
+   if(verbosity > 3){
+    Rcout << "   -- n items in this spec: " << n_items << std::endl;
+    print_mat(pd_x_vals[k], "x_vals[k]", 5, 5);
+   }
+
+   for(uword j = 0; j < n_items; ++j){
+
+    vec x_val_vec = pd_x_vals[k].row(j).t();
+
+    if(verbosity > 3){
+     print_vec(x_val_vec, "current row of x_vals", 5);
+    }
+
+    predict_leaf(prediction_data, oobag, x_val_vec, pd_x_cols[k]);
+    predict_value(result[k][j], oobag_denom, pred_type, oobag);
+
+   }
+
+  }
+
+ }
+
+ // # nocov start
+ // placeholder
+ arma::mat Tree::glm_fit(){
+  Rcpp::stop("default glm fit function called");
+  mat out;
+  return(out);
+ }
+
+ arma::mat Tree::glmnet_fit(){
+  Rcpp::stop("default glmnet fit function called");
+  mat out;
+  return(out);
+ }
+
+ arma::mat Tree::user_fit(){
+  Rcpp::stop("default user fit function called");
+  mat out;
+  return(out);
+ }
+ // # nocov end
 
  void Tree::grow(arma::vec* vi_numer,
                  arma::uvec* vi_denom){
@@ -880,14 +932,9 @@
 
      switch (lincomb_type) {
 
-     case LC_NEWTON_RAPHSON: {
-
-      beta = coxph_fit(x_node, y_node, w_node,
-                       lincomb_scale, lincomb_ties_method,
-                       lincomb_eps, lincomb_iter_max);
-
+     case LC_GLM: {
+      beta = glm_fit();
       break;
-
      }
 
      case LC_RANDOM_COEFS: {
@@ -905,41 +952,13 @@
      }
 
      case LC_GLMNET: {
-
-      NumericMatrix xx = wrap(x_node);
-      NumericMatrix yy = wrap(y_node);
-      NumericVector ww = wrap(w_node);
-
-      // initialize function from tree object
-      // (Functions can't be stored in C++ classes, but RObjects can)
-      Function f_beta = as<Function>(lincomb_R_function);
-
-      NumericMatrix beta_R = f_beta(xx, yy, ww,
-                                    lincomb_alpha,
-                                    lincomb_df_target);
-
-      beta = mat(beta_R.begin(), beta_R.nrow(), beta_R.ncol(), false);
-
+      beta = glmnet_fit();
       break;
-
      }
 
      case LC_R_FUNCTION: {
-
-      NumericMatrix xx = wrap(x_node);
-      NumericMatrix yy = wrap(y_node);
-      NumericVector ww = wrap(w_node);
-
-      // initialize function from tree object
-      // (Functions can't be stored in C++ classes, but RObjects can)
-      Function f_beta = as<Function>(lincomb_R_function);
-
-      NumericMatrix beta_R = f_beta(xx, yy, ww);
-
-      beta = mat(beta_R.begin(), beta_R.nrow(), beta_R.ncol(), false);
-
+      beta = user_fit();
       break;
-
      }
 
      } // end switch lincomb_type
@@ -980,7 +999,7 @@
 
        if(cut_point < R_PosInf){
 
-        if(vi_type == VI_ANOVA && lincomb_type == LC_NEWTON_RAPHSON){
+        if(vi_type == VI_ANOVA && lincomb_type == LC_GLM){
 
          // only do ANOVA variable importance when
          //  1. a split of the node is guaranteed
@@ -1065,6 +1084,10 @@
 
     }
 
+    // there is no potential split if cols_node was returned
+    // as empty from sample_cols, so don't waste time on retries
+    if(cols_node.is_empty()) n_retry = split_max_retry;
+
     if(n_retry >= split_max_retry){
      sprout_leaf(*node);
      break;
@@ -1092,7 +1115,8 @@
 
  } // Tree::grow
 
- void Tree::predict_leaf(Data* prediction_data, bool oobag) {
+ void Tree::predict_leaf(Data* prediction_data,
+                         bool oobag) {
 
   pred_leaf.zeros(prediction_data->n_rows);
 
@@ -1169,23 +1193,125 @@
 
  }
 
- double Tree::compute_prediction_accuracy(arma::vec& preds){
+ void Tree::predict_leaf(Data* prediction_data,
+                         bool oobag,
+                         arma::vec& pd_x_vals,
+                         arma::uvec& pd_x_cols){
 
-  if (oobag_eval_type == EVAL_R_FUNCTION){
+  pred_leaf.zeros(prediction_data->n_rows);
 
-   NumericMatrix y_wrap = wrap(y_oobag);
-   NumericVector w_wrap = wrap(w_oobag);
-   NumericVector p_wrap = wrap(preds);
+  // if tree is root node, 0 is the correct leaf prediction
+  if(coef_values.size() == 0) return;
 
-   // initialize function from tree object
-   // (Functions can't be stored in C++ classes, but RObjects can)
-   Function f_oobag = as<Function>(oobag_R_function);
+  if(verbosity > 2){
+   // # nocov start
+   Rcout << "   -- computing dependence leaf predictions" << std::endl;
+   // # nocov end
+  }
 
-   NumericVector result_R = f_oobag(y_wrap, w_wrap, p_wrap);
+  uvec obs_in_node;
 
-   return(result_R[0]);
+  // it iterates over the observations in a node
+  uvec::iterator it;
+
+  // i iterates over nodes, j over observations
+  // uword i, j;
+
+  for(uword i = 0; i < coef_values.size(); i++){
+
+   // if child_left == 0, it's a leaf (no need to find next child)
+   if(child_left[i] != 0){
+
+    if(i == 0 && oobag){
+     obs_in_node = rows_oobag;
+    } else if (i == 0 && !oobag) {
+     obs_in_node = regspace<uvec>(0, 1, pred_leaf.size()-1);
+    } else {
+     obs_in_node = find(pred_leaf == i);
+    }
+
+    if(obs_in_node.size() > 0){
+
+     lincomb = prediction_data->x_submat_mult_beta(obs_in_node,
+                                                   coef_indices[i],
+                                                   coef_values[i],
+                                                   pd_x_vals,
+                                                   pd_x_cols);
+
+     it = obs_in_node.begin();
+
+     for(uword j = 0; j < obs_in_node.size(); ++j, ++it){
+
+      if(lincomb[j] <= cutpoint[i]) {
+
+       pred_leaf[*it] = child_left[i];
+
+      } else {
+
+       pred_leaf[*it] = child_left[i]+1;
+
+      }
+
+     }
+
+     if(verbosity > 4){
+      // # nocov start
+      uvec in_left = find(pred_leaf == child_left[i]);
+      uvec in_right = find(pred_leaf == child_left[i]+1);
+      Rcout << "No. to node " << child_left[i] << ": ";
+      Rcout << in_left.size() << "; " << std::endl;
+      Rcout << "No. to node " << child_left[i]+1 << ": ";
+      Rcout << in_right.size() << std::endl << std::endl;
+      // # nocov end
+     }
+
+    }
+
+   }
 
   }
+
+  if(oobag){ pred_leaf.elem(rows_inbag).fill(max_nodes); }
+
+ }
+
+ void Tree::predict_value(arma::mat& pred_output,
+                          arma::vec& pred_denom,
+                          PredType   pred_type,
+                          bool       oobag){
+
+  if(verbosity > 2){
+   // # nocov start
+   uvec tmp_uvec = find(pred_leaf < max_nodes);
+
+   if(tmp_uvec.size() == 0){
+    Rcout << pred_leaf                  << std::endl;
+    Rcout << "max_nodes: " << max_nodes << std::endl;
+   }
+
+   Rcout << "   -- N preds expected: " << tmp_uvec.size() << std::endl;
+   // # nocov end
+  }
+
+  uvec pred_leaf_sort = sort_index(pred_leaf, "ascend");
+
+  uword n_preds_made = predict_value_internal(pred_leaf_sort,
+                                              pred_output,
+                                              pred_denom,
+                                              pred_type,
+                                              oobag);
+
+  if(verbosity > 2){
+   // # nocov start
+   Rcout << "   -- N preds made: " << n_preds_made;
+   Rcout << std::endl;
+   Rcout << std::endl;
+   // # nocov end
+  }
+
+ }
+
+ double Tree::compute_prediction_accuracy(arma::mat& preds){
 
   return(compute_prediction_accuracy_internal(preds));
 
