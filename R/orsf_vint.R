@@ -28,7 +28,8 @@
 #'  with more trees.
 #'
 #'
-#' @return a data.table with variable interaction scores
+#' @return a data.table with variable interaction scores and
+#'   partial dependence values.
 #'
 #' @export
 #'
@@ -67,7 +68,6 @@ orsf_vint <- function(object,
                  expected_type = 'character')
 
  }
-
 
  pspec <- predictors %||% object$get_names_x()
 
@@ -113,17 +113,15 @@ orsf_vint <- function(object,
  pd_split <- split(pd, by = split_vars)
 
  # for cran
- . <- score <- var_1_value <- var_2_value <- NULL
+ . <- score <- var_1_value <- var_2_value <- pd_values <- NULL
 
  pd_scores <- vapply(
   pd_split,
   function(dt){
-   mean(
-    c(collapse::fsd(
-     dt[, .(vi = collapse::fsd(mean)), by = var_1_value][["vi"]]
-    ),
-    collapse::fsd(
-     dt[, .(vi = collapse::fsd(mean)), by = var_2_value][["vi"]])
+   collapse::fmean(
+    c(
+     collapse::fsd(dt[, .(vi = collapse::fsd(mean)), by = var_1_value][["vi"]]),
+     collapse::fsd(dt[, .(vi = collapse::fsd(mean)), by = var_2_value][["vi"]])
     )
    )
   },
@@ -146,6 +144,8 @@ orsf_vint <- function(object,
   out <- out[, .(score = mean(score)), by = c('interaction')]
 
  }
+
+ out[, pd_values := pd_split]
 
  out[order(-score)]
 

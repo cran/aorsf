@@ -317,31 +317,52 @@ pbc_orsf$edema_05 <- NULL
 
 ## Find interactions using PD
 
-Random forests are good at using interactions, but less good at telling you about them. Use `orsf_vint()` to apply the method for variable interaction scoring with PD described by Greenwell et al (2018). This can take a little while if you have lots of predictors, so setting `verbose_progress = TRUE` may be helpful.
+Random forests are good at using interactions, but less good at telling you about them. Use `orsf_vint()` to apply the method for variable interaction scoring with PD described by Greenwell et al (2018). This can take a little while if you have lots of predictors, and it seems to work best with continuous by continuous interactions. Interactions with categorical variables are sometimes over- or under- scored.
 
 ```{r}
 
-vint_scores <- orsf_vint(fit_surv, verbose_progress = TRUE)
+# use just the continuous variables
+preds <- names(fit_surv$get_means())
 
-vint_scores[1:5]
+vint_scores <- orsf_vint(fit_surv, predictors = preds)
+
+vint_scores
+
+
+```
+
+The scores include partial dependence values that you can pull out and plot:
+
+```{r}
+
+# top scoring interaction
+pd_top <- vint_scores$pd_values[[1]]
+
+# center pd values so it's easier to see the interaction effect
+pd_top[, mean := mean - mean[1], by = var_2_value]
+
+ggplot(pd_top) + 
+ aes(x = var_1_value, 
+     y = mean, 
+     color = factor(var_2_value), 
+     group = factor(var_2_value)) + 
+ geom_line() + 
+ labs(x = "albumin", 
+      y = "predicted mortality (centered)",
+      color = "protime")
 
 ```
 
 Again we use a sanity check with `coxph` to see if these interactions are detected using a standard test:
 
 ```{r}
+
+# test the top score (expect strong interaction)
 fit_cph <- coxph(Surv(time,status) ~ albumin * protime, 
                  data = pbc_orsf)
 
 anova(fit_cph)
 
-fit_cph <- update(fit_cph, . ~ stage * protime)
-
-anova(fit_cph)
-
-fit_cph <- update(fit_cph, . ~ copper * protime)
-
-anova(fit_cph)
 ```
 
 *Note*: Caution is warranted when interpreting statistical hypotheses that are motivated by the same data they are tested with. Results like the p-values for interaction shown above should be interpreted as exploratory.
@@ -474,8 +495,6 @@ ice_train
 ```
 
 Multi-prediction horizon ice comes with minimal extra computational cost. Use a fine grid of time values and  assess whether predictors have time-varying effects.
-
-
 
 ## Visualizing ICE curves
 

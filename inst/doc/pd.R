@@ -209,24 +209,42 @@ pbc_orsf$edema_05 <- NULL
 
 ## -----------------------------------------------------------------------------
 
-vint_scores <- orsf_vint(fit_surv, verbose_progress = TRUE)
+# use just the continuous variables
+preds <- names(fit_surv$get_means())
 
-vint_scores[1:5]
+vint_scores <- orsf_vint(fit_surv, predictors = preds)
+
+vint_scores
+
 
 
 ## -----------------------------------------------------------------------------
+
+# top scoring interaction
+pd_top <- vint_scores$pd_values[[1]]
+
+# center pd values so it's easier to see the interaction effect
+pd_top[, mean := mean - mean[1], by = var_2_value]
+
+ggplot(pd_top) + 
+ aes(x = var_1_value, 
+     y = mean, 
+     color = factor(var_2_value), 
+     group = factor(var_2_value)) + 
+ geom_line() + 
+ labs(x = "albumin", 
+      y = "predicted mortality (centered)",
+      color = "protime")
+
+
+## -----------------------------------------------------------------------------
+
+# test the top score (expect strong interaction)
 fit_cph <- coxph(Surv(time,status) ~ albumin * protime, 
                  data = pbc_orsf)
 
 anova(fit_cph)
 
-fit_cph <- update(fit_cph, . ~ stage * protime)
-
-anova(fit_cph)
-
-fit_cph <- update(fit_cph, . ~ copper * protime)
-
-anova(fit_cph)
 
 ## -----------------------------------------------------------------------------
 
