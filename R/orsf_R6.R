@@ -364,12 +364,27 @@ ObliqueForest <- R6::R6Class(
    self$pred_oobag <- cpp_output$pred_oobag
    self$eval_oobag <- cpp_output$eval_oobag
 
+   # don't let rows_oobag contain an empty vector, otherwise it
+   # will crash R when cpp tries to load the tree later
+   empty_oob_rows <- vapply(self$forest$rows_oobag, is_empty, logical(1))
+
+   if(any(empty_oob_rows)) {
+    for(i in which(empty_oob_rows)){
+     self$forest$rows_oobag[[i]] <- numeric(1)
+    }
+   }
+
    if(self$importance_type != 'none'){
     private$clean_importance()
    }
 
    if(self$pred_type != 'none'){
     private$clean_pred_oobag()
+   } else {
+    # revert pred type to NULL so it is correctly
+    # initialized when this object is passed to
+    # other orsf functions
+    self$pred_type <- NULL
    }
 
    self$trained <- TRUE
@@ -404,6 +419,7 @@ ObliqueForest <- R6::R6Class(
                      pred_horizon,
                      pred_aggregate,
                      pred_simplify,
+                     oobag,
                      na_action,
                      boundary_checks,
                      n_thread,
@@ -418,6 +434,17 @@ ObliqueForest <- R6::R6Class(
                         verbose_progress = self$verbose_progress)
 
    private_state <- list(data_rows_complete = private$data_rows_complete)
+
+   # assign new_data to original data if user did not supply any.
+   # (this is usually done to compute oobag predictions).
+   # DO NOT skip checking. A user might modify the data in a forest
+   # object and then use this function. We need checks for that case.
+   new_data <- new_data %||% self$data
+
+   if(oobag && nrow(new_data) != self$n_obs){
+    stop("input data must have ", self$n_obs, " observations to ",
+         "compute out-of-bag predictions.", call. = FALSE)
+   }
 
    # run checks before you assign new values to object.
    # otherwise, if a check throws an error, the object will
@@ -454,7 +481,8 @@ ObliqueForest <- R6::R6Class(
      private$y <- matrix(0, nrow = 1, ncol = 1)
      private$w <- rep(1, nrow(private$x))
 
-     private$predict_internal(simplify = pred_simplify)
+     private$predict_internal(simplify = pred_simplify,
+                              oobag = oobag)
 
     },
     silent = TRUE
@@ -473,8 +501,9 @@ ObliqueForest <- R6::R6Class(
    # object is restored to its original state.
    if(is_error(out)) stop(out, call. = FALSE)
 
-   return(out)
-
+   # NaNs may occur with oobag = TRUE and small n_tree
+   coerce_nans(out, to = NA_real_)
+   # out
 
   },
 
@@ -703,11 +732,13 @@ ObliqueForest <- R6::R6Class(
                            pred_horizon = NULL,
                            pred_type = NULL,
                            importance_type = NULL,
+                           class = NULL,
                            verbose_progress = FALSE){
 
    # check incoming values if they were specified.
    private$check_n_variables(n_variables)
    private$check_verbose_progress(verbose_progress)
+   private$check_class(class)
 
    if(!is.null(pred_horizon)){
     private$check_pred_horizon(pred_horizon, boundary_checks = TRUE)
@@ -809,6 +840,13 @@ ObliqueForest <- R6::R6Class(
 
    if(self$tree_type == 'classification'){
     new_order <- insert_vals(new_order, 2, 'class')
+    if(!is.null(class)){
+     .class <- class # prevents mix-up with class in dt
+     pd_output <- pd_output[class == .class]
+    } else {
+     # put the highest level class on top
+     pd_output <- pd_output[order(-class)]
+    }
    }
 
    setcolorder(pd_output, new_order)
@@ -1891,13 +1929,13 @@ ObliqueForest <- R6::R6Class(
 
    input <- verbose_progress %||% self$verbose_progress
 
-   check_arg_type(arg_value = input,
-                  arg_name = 'verbose_progress',
-                  expected_type = 'logical')
-
-   check_arg_length(arg_value = input,
-                    arg_name = 'verbose_progress',
-                    expected_length = 1)
+   # check_arg_type(arg_value = input,
+   #                arg_name = 'verbose_progress',
+   #                expected_type = 'logical')
+   #
+   # check_arg_length(arg_value = input,
+   #                  arg_name = 'verbose_progress',
+   #                  expected_length = 1)
 
   },
   check_units = function(data = NULL){
@@ -2124,6 +2162,27 @@ ObliqueForest <- R6::R6Class(
 
   },
 
+  check_class = function(class = NULL){
+
+   if(!is.null(class)){
+
+    check_arg_is(arg_value = class,
+                 arg_name = "class",
+                 expected_class = "character")
+
+    check_arg_length(arg_value = class,
+                     arg_name = "class",
+                     expected_length = 1L)
+
+    check_arg_is_valid(arg_value = class,
+                       arg_name = "class",
+                       valid_options = self$class_levels)
+
+   }
+
+
+  },
+
   # runs checks and sets defaults where needed.
   # data is NULL when we are creating a new forest,
   # but may be non-NULL if we update an existing one
@@ -2267,11 +2326,24 @@ ObliqueForest <- R6::R6Class(
                               x_original = names_x_data)
 
 
+   # coerce logicals to 0/1 integers.
+   # only do this for outcomes because changing predictor types here
+   # would cause issues down the road. E.g., if X[,1] is an integer
+   # in the training data and X[,1] is a logical in the testing data.
+   for(.name in c(names_y_data)){
+
+    if(self$get_var_type(.name) == 'logical'){
+     self$data[[.name]] <- as.integer(self$data[[.name]])
+    }
+
+   }
+
    types_y_data <- vapply(names_y_data, self$get_var_type, character(1))
    types_x_data <- vapply(names_x_data, self$get_var_type, character(1))
 
    valid_y_types <- c('numeric', 'integer', 'units', 'factor', "Surv")
    valid_x_types <- c(valid_y_types, 'ordered')
+
 
    private$check_var_types(types_y_data, names_y_data, valid_y_types)
    private$check_var_types(types_x_data, names_x_data, valid_x_types)
@@ -2460,6 +2532,15 @@ ObliqueForest <- R6::R6Class(
   compute_bounds = function(){
 
    numeric_data <- select_cols(self$data, private$data_names$x_numeric)
+
+   if(is_empty(numeric_data)){
+
+    private$data_bounds <- matrix(NA, nrow=5, ncol=1,
+                                  dimnames = list(c('10%', '25%', '50%', '75%', '90%'),
+                                                  "placeholder"))
+    return()
+
+   }
 
    if(self$na_action == 'omit'){
     numeric_data <- collapse::fsubset(numeric_data, private$data_rows_complete)
@@ -2855,6 +2936,7 @@ ObliqueForest <- R6::R6Class(
    oob_data <- data.table(
     n_predictors = seq(n_predictors),
     stat_value = rep(NA_real_, n_predictors),
+    variables_included = vector(mode = 'list', length = n_predictors),
     predictors_included = vector(mode = 'list', length = n_predictors),
     predictor_dropped = rep(NA_character_, n_predictors)
    )
@@ -2886,6 +2968,34 @@ ObliqueForest <- R6::R6Class(
                                      oobag_pred = TRUE,
                                      importance_group_factors = TRUE,
                                      write_forest = FALSE)
+
+
+   fctr_key <- lapply(self$get_fctr_info()$keys, function(x) x[-1])
+
+   fctr_key <- data.frame(
+    variable = rep(names(fctr_key), sapply(fctr_key, length)),
+    predictor = unlist(fctr_key),
+    row.names = NULL
+   )
+
+   variable_key <- data.frame(
+    predictor = self$get_names_x(ref_coded = TRUE)
+   )
+
+   if(is_empty(fctr_key)){
+
+    variable_key$variable <- variable_key$predictor
+
+   } else {
+
+    variable_key <- merge(variable_key, fctr_key,
+                          by = 'predictor',
+                          all.x = TRUE)
+
+   }
+
+   variable_key$variable[is.na(variable_key$variable)] <-
+    variable_key$predictor[is.na(variable_key$variable)]
 
    max_progress <- n_predictors - n_predictor_min
    current_progress <- 0
@@ -2935,13 +3045,20 @@ ObliqueForest <- R6::R6Class(
     worst_index <- which.min(cpp_output$importance)
     worst_predictor <- colnames(cpp_args$x)[worst_index]
 
+
+    .variables_included <- with(
+     variable_key,
+     unique(variable[predictor %in% colnames(cpp_args$x)])
+    )
+
     oob_data[n_predictors,
              `:=`(n_predictors = n_predictors,
                   stat_value = cpp_output$eval_oobag$stat_values[1,1],
+                  variables_included = .variables_included,
                   predictors_included = colnames(cpp_args$x),
                   predictor_dropped = worst_predictor)]
 
-    cpp_args$x <- cpp_args$x[, -worst_index]
+    cpp_args$x <- cpp_args$x[, -worst_index, drop = FALSE]
     n_predictors <- n_predictors - 1
     current_progress <- current_progress + 1
 
@@ -2950,6 +3067,7 @@ ObliqueForest <- R6::R6Class(
    if(verbose_progress){
     cat("Selecting variables: 100%\n")
    }
+
 
    collapse::na_omit(oob_data)
 
@@ -3108,10 +3226,14 @@ ObliqueForest <- R6::R6Class(
                          "prob"  = 6,
                          "class" = 7,
                          "leaf"  = 8,
-                         "time"  = 9),
+                         "time"  = 2), # time=2 is not a typo
     pred_mode = .dots$pred_mode %||% FALSE,
     pred_aggregate = .dots$pred_aggregate %||% (self$pred_type != 'leaf'),
-    pred_horizon = .dots$pred_horizon %||% self$pred_horizon %||% 1,
+    pred_horizon = if(self$pred_type == 'time'){
+     self$event_times
+    } else {
+     .dots$pred_horizon %||% self$pred_horizon %||% 1
+    },
     oobag = .dots$oobag %||% self$oobag_pred_mode,
     oobag_R_function = .dots$oobag_eval_function %||% self$oobag_eval_function,
     oobag_eval_type_R = switch(
@@ -3282,7 +3404,8 @@ ObliqueForestSurvival <- R6::R6Class(
 
   leaf_min_events = NULL,
   split_min_events = NULL,
-  pred_horizon = NULL
+  pred_horizon = NULL,
+  event_times = NULL
 
  ),
 
@@ -3579,6 +3702,10 @@ ObliqueForestSurvival <- R6::R6Class(
    private$max_time <- y[last_value(private$data_row_sort), 1]
    # boundary check for event-based tree parameters
    private$n_events <- collapse::fsum(y[, 2])
+   # unique event times sorted in ascending order
+   self$event_times <- sort(collapse::funique(
+    y[[1]][collapse::whichv(x = y[[2]], value = 1)]
+   ), decreasing = FALSE)
 
    # if pred_horizon is unspecified, provide sensible default
    # if it is specified, check for correctness
@@ -3755,9 +3882,23 @@ ObliqueForestSurvival <- R6::R6Class(
    unsorted <- collapse::radixorder(private$data_row_sort)
    self$pred_oobag <- self$pred_oobag[unsorted, , drop = FALSE]
 
-   # mortality predictions should always be 1 column
+   if(self$pred_type == 'time'){
+
+    self$eval_oobag$stat_values <-
+     self$eval_oobag$stat_values[, ncol(self$pred_oobag), drop = FALSE]
+
+    self$pred_oobag <- apply(self$pred_oobag,
+                             MARGIN = 1,
+                             FUN = rmst,
+                             times = self$event_times)
+
+    self$pred_oobag <- collapse::qM(self$pred_oobag)
+
+   }
+
+   # these predictions should always be 1 column
    # b/c they do not depend on the prediction horizon
-   if(self$pred_type %in% c('mort', 'time')){
+   if(self$pred_type == 'mort'){
 
     self$eval_oobag$stat_values <-
      self$eval_oobag$stat_values[, 1L, drop = FALSE]
@@ -3768,6 +3909,16 @@ ObliqueForestSurvival <- R6::R6Class(
 
   },
   clean_pred_new_internal = function(preds){
+
+   if(self$pred_type == 'time'){
+
+    preds <- apply(preds,
+                   MARGIN = 1,
+                   FUN = rmst,
+                   times = self$event_times)
+    preds <- collapse::qM(preds)
+
+   }
 
    # don't let multiple pred horizon values through for mort
    if(self$pred_type %in% c('mort', 'time')){
@@ -3781,10 +3932,14 @@ ObliqueForestSurvival <- R6::R6Class(
 
   },
 
-  predict_internal = function(simplify){
+  predict_internal = function(simplify, oobag){
 
    private$pred_horizon_order <- order(self$pred_horizon)
    pred_horizon_ordered <- self$pred_horizon[private$pred_horizon_order]
+
+   # must sort if oobag b/c when oobag_rows were originally created,
+   # it was after the data had been sorted.
+   if(oobag) private$sort_inputs(sort_y = FALSE)
 
    cpp_args = private$prep_cpp_args(x = private$x,
                                     y = private$y,
@@ -3793,7 +3948,7 @@ ObliqueForestSurvival <- R6::R6Class(
                                     pred_type = self$pred_type,
                                     pred_aggregate = self$pred_aggregate,
                                     pred_horizon = pred_horizon_ordered,
-                                    oobag_pred = FALSE,
+                                    oobag_pred = oobag,
                                     pred_mode = TRUE,
                                     write_forest = FALSE,
                                     run_forest = TRUE)
@@ -3825,6 +3980,13 @@ ObliqueForestSurvival <- R6::R6Class(
    }
 
    out_values <- do.call(orsf_cpp, args = cpp_args)$pred_new
+
+   if(oobag){
+    # put the oob predictions into the same order as the training data.
+    unsorted <- collapse::radixorder(private$data_row_sort)
+    out_values <- out_values[unsorted, , drop = FALSE]
+
+   }
 
    private$clean_pred_new(out_values)
 
@@ -4061,7 +4223,15 @@ ObliqueForestClassification <- R6::R6Class(
 
   },
 
-  predict_internal = function(simplify){
+  clean_pred_oobag_internal = function(){
+
+   if(self$pred_type %in% c("prob") && is.matrix(self$pred_oobag)){
+    colnames(self$pred_oobag) <- self$class_levels
+   }
+
+  },
+
+  predict_internal = function(simplify, oobag){
 
    # resize y to have the right number of columns
    private$y <- matrix(0, ncol = self$n_class)
@@ -4072,7 +4242,7 @@ ObliqueForestClassification <- R6::R6Class(
                                     importance_type = 'none',
                                     pred_type = self$pred_type,
                                     pred_aggregate = self$pred_aggregate,
-                                    oobag_pred = FALSE,
+                                    oobag_pred = oobag,
                                     pred_mode = TRUE,
                                     write_forest = FALSE,
                                     run_forest = TRUE)
@@ -4313,7 +4483,7 @@ ObliqueForestRegression <- R6::R6Class(
 
   },
 
-  predict_internal = function(simplify){
+  predict_internal = function(simplify, oobag){
 
    # resize y to have the right number of columns
    private$y <- matrix(0, ncol = 1)
@@ -4324,7 +4494,7 @@ ObliqueForestRegression <- R6::R6Class(
                                     importance_type = 'none',
                                     pred_type = self$pred_type,
                                     pred_aggregate = self$pred_aggregate,
-                                    oobag_pred = FALSE,
+                                    oobag_pred = oobag,
                                     pred_mode = TRUE,
                                     write_forest = FALSE,
                                     run_forest = TRUE)

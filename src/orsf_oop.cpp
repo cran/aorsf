@@ -452,6 +452,11 @@ double compute_mse_exported(arma::vec& y,
 
   case TREE_SURVIVAL:
 
+   // if(pred_type == PRED_TIME){
+   //  pred_type = PRED_SURVIVAL;
+   //  pred_horizon = find_unique_event_times();
+   // }
+
    forest = std::make_unique<ForestSurvival>(leaf_min_events,
                                              split_min_events,
                                              pred_horizon);
@@ -545,6 +550,7 @@ double compute_mse_exported(arma::vec& y,
     std::vector<std::vector<vec>>    coef_values  = loaded_forest["coef_values"];
     std::vector<std::vector<uvec>>   coef_indices = loaded_forest["coef_indices"];
     std::vector<std::vector<double>> leaf_summary = loaded_forest["leaf_summary"];
+    vec                              oobag_denom  = loaded_forest["oobag_denom"];
 
     if(tree_type == TREE_SURVIVAL){
 
@@ -557,7 +563,7 @@ double compute_mse_exported(arma::vec& y,
      temp.load(n_tree, n_obs, rows_oobag, cutpoint, child_left,
                coef_values, coef_indices, leaf_pred_indx,
                leaf_pred_prob, leaf_pred_chaz, leaf_summary,
-               pd_type, pd_x_vals, pd_x_cols, pd_probs);
+               oobag_denom, pd_type, pd_x_vals, pd_x_cols, pd_probs);
 
     } else if (tree_type == TREE_CLASSIFICATION){
 
@@ -569,7 +575,7 @@ double compute_mse_exported(arma::vec& y,
 
      temp.load(n_tree, n_obs, n_class, rows_oobag, cutpoint, child_left,
                coef_values, coef_indices, leaf_pred_prob, leaf_summary,
-               pd_type, pd_x_vals, pd_x_cols, pd_probs);
+               oobag_denom, pd_type, pd_x_vals, pd_x_cols, pd_probs);
 
 
     } else if (tree_type == TREE_REGRESSION){
@@ -580,7 +586,7 @@ double compute_mse_exported(arma::vec& y,
 
      temp.load(n_tree, n_obs, rows_oobag, cutpoint, child_left,
                coef_values, coef_indices, leaf_pred_prob, leaf_summary,
-               pd_type, pd_x_vals, pd_x_cols, pd_probs);
+               oobag_denom, pd_type, pd_x_vals, pd_x_cols, pd_probs);
 
 
     }
@@ -608,7 +614,7 @@ double compute_mse_exported(arma::vec& y,
 
     List forest_out;
     forest_out.push_back(n_obs, "n_obs");
-    // forest_out.push_back(forest->get_oobag_denom(), "oobag_denom");
+    forest_out.push_back(forest->get_oobag_denom(), "oobag_denom");
     forest_out.push_back(forest->get_rows_oobag(), "rows_oobag");
     forest_out.push_back(forest->get_cutpoint(), "cutpoint");
     forest_out.push_back(forest->get_child_left(), "child_left");

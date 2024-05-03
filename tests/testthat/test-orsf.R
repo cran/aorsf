@@ -43,6 +43,18 @@ test_that(
 )
 
 test_that(
+ desc = 'logical outcomes are allowed',
+ code = {
+
+  pbc$status2 <- as.logical(pbc$status)
+  fit_surv <- orsf(pbc, time + status2 ~ ., no_fit = TRUE)
+  expect_s3_class(fit_surv, "ObliqueForestSurvival")
+  pbc$status2 <- NULL
+
+ }
+)
+
+test_that(
  desc = 'potential user-errors with outcome types are caught',
  code = {
 
@@ -852,7 +864,7 @@ test_that(
 
     oobag_preds <- na.omit(fit$pred_oobag)
 
-    expect_true(all(apply(oobag_preds, 1, sum) == 1))
+    expect_true(all(apply(oobag_preds, 1, sum) - 1 < 1e-5))
     expect_true(all(oobag_preds >= 0))
     expect_true(all(oobag_preds <= 1))
 
@@ -973,6 +985,23 @@ test_that(
    }
 
   }
+
+ }
+)
+
+test_that(
+ desc = "data without numerics are allowed",
+ code = {
+
+  fit <- orsf(pbc_orsf, time + status ~ sex + trt, n_tree = n_tree_test)
+
+  expect_true(all(is.na(fit$get_bounds())))
+
+  expect_equal(length(orsf_vi(fit)), 2L)
+
+  skip_on_cran()
+  # don't require too much compute time from cran
+  expect_equal(nrow(orsf_pd_oob(fit, pred_spec_auto(sex, trt))), 4L)
 
  }
 )

@@ -1,3 +1,23 @@
+# aorsf 0.1.4
+
+* `orsf_vs` now returns a column that contains non-reference coded variable names (see https://github.com/ropensci/aorsf/pull/52).
+
+* `orsf_vs` no longer throws an error when `n_predictor_min = 1` is used (see https://github.com/ropensci/aorsf/pull/58).
+
+* `orsf_summarize_uni` now allows specification of a class to summarize for oblique classification forests (see https://github.com/ropensci/aorsf/pull/57). 
+
+* fixed an issue where `orsf` would throw an uninformative error when all predictors were categorical (see https://github.com/ropensci/aorsf/pull/56)
+
+* oblique random forests can now compute out-of-bag predictions on modified versions of their training data (see https://github.com/ropensci/aorsf/pull/54)
+
+* Setting `oobag_pred_type` to `'none'` when growing a forest no longer necessitates the specification of `pred_type` when calling `predict` later (see https://github.com/ropensci/aorsf/pull/48). 
+
+* Setting `sample_fraction` to 1 will no longer result in empty `oobag_rows` in the forest object (this would cause R to crash when the forest was passed to C++; see https://github.com/ropensci/aorsf/pull/48)
+
+* Re-worked the creation and maintenance of `oobag_denom` in C++ routines (see https://github.com/ropensci/aorsf/pull/48).
+
+* Restricted mean survival time is now used for `pred_type = 'time'` instead of median survival time (See https://github.com/ropensci/aorsf/pull/46).
+
 # aorsf 0.1.3
 
 * minor changes to partial dependence vignette to resolve code sanitization errors. 

@@ -6,11 +6,12 @@
 \usage{
 \method{predict}{ObliqueForest}(
   object,
-  new_data,
+  new_data = NULL,
   pred_type = NULL,
   pred_horizon = NULL,
   pred_aggregate = TRUE,
   pred_simplify = FALSE,
+  oobag = FALSE,
   na_action = NULL,
   boundary_checks = TRUE,
   n_thread = NULL,
@@ -64,6 +65,11 @@ will always be returned in a numeric matrix or a list of numeric matrices.
 If \code{TRUE}, predictions may be simplified to a vector, e.g., if \code{pred_type}
 is \code{'mort'} for survival or \code{'class'} for classification, or an array of
 matrices if \code{length(pred_horizon) > 1}.}
+
+\item{oobag}{(\emph{logical}) If \code{FALSE} (the default), predictions will
+be computed using all trees for each observation. If \code{TRUE}, then
+out-of-bag predictions will be computed. This input parameter should
+only be set to \code{TRUE} if \code{new_data} is \code{NULL}.}
 
 \item{na_action}{(\emph{character}) what should happen when \code{new_data} contains missing values (i.e., \code{NA} values). Valid options are:
 \itemize{
