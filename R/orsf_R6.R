@@ -703,7 +703,9 @@ ObliqueForest <- R6::R6Class(
 
   # Variable selection
   # returns a data.table with variable selection info
-  select_variables = function(n_predictor_min, verbose_progress){
+  select_variables = function(n_predictor_min,
+                              n_predictor_drop,
+                              verbose_progress){
 
    public_state <- list(verbose_progress = self$verbose_progress,
                         forest           = self$forest,
@@ -712,7 +714,9 @@ ObliqueForest <- R6::R6Class(
    object_trained <- self$trained
 
    out <- try(
-    private$select_variables_internal(n_predictor_min, verbose_progress)
+    private$select_variables_internal(n_predictor_min,
+                                      n_predictor_drop,
+                                      verbose_progress)
    )
 
    private$restore_state(public_state, private_state = NULL)
@@ -970,11 +974,23 @@ ObliqueForest <- R6::R6Class(
   },
 
   get_importance_clean = function(importance_raw = NULL,
-                                  group_factors = NULL){
+                                  group_factors = NULL,
+                                  overwrite = TRUE){
 
 
    input <- importance_raw %||% private$importance_raw
    group_factors <- group_factors %||% self$group_factors
+
+   # if an oblique forest is fit with anova, then a user
+   # asks to use the same forest to compute oobag permutation
+   # importance, we don't want to overwrite the initial importance
+   # values in the forest, so we return the cleaned importance values.
+   if(!overwrite){
+    return(private$clean_importance(input,
+                                    group_factors,
+                                    overwrite = overwrite))
+   }
+
    private$clean_importance(input, group_factors)
 
    return(self$importance)
@@ -1528,10 +1544,26 @@ ObliqueForest <- R6::R6Class(
                     arg_name = 'leaf_min_obs',
                     expected_length = 1)
 
-   check_arg_lteq(arg_value = input,
-                  arg_name = "leaf_min_obs",
-                  bound = round(n_obs / 2),
-                  append_to_msg = "(number of observations divided by 2)")
+   .check <- check_arg_lteq(
+    arg_value = input,
+    arg_name = "leaf_min_obs",
+    bound = floor(n_obs / 2),
+    append_to_msg = "(number of observations divided by 2)",
+    error = FALSE
+   )
+
+   if(.check != "okay"){
+
+    warning_msg <-
+     paste0(.check, ". The highest admissible value will be used")
+
+    self$leaf_min_obs <- floor(n_obs / 2)
+
+    warning(warning_msg, call. = FALSE)
+
+   }
+
+
 
   },
   check_split_rule = function(split_rule = NULL){
@@ -2928,9 +2960,11 @@ ObliqueForest <- R6::R6Class(
 
   },
 
-  select_variables_internal = function(n_predictor_min, verbose_progress){
+  select_variables_internal = function(n_predictor_min,
+                                       n_predictor_drop,
+                                       verbose_progress){
 
-   n_predictors <- length(private$data_names$x_original)
+   n_predictors <- length(private$data_names$x_ref_code)
 
    # verbose progress on the forest should always be FALSE
    # because for orsf_vs, verbosity is coordinated in R
@@ -2941,7 +2975,7 @@ ObliqueForest <- R6::R6Class(
     stat_value = rep(NA_real_, n_predictors),
     variables_included = vector(mode = 'list', length = n_predictors),
     predictors_included = vector(mode = 'list', length = n_predictors),
-    predictor_dropped = rep(NA_character_, n_predictors)
+    predictor_dropped = vector(mode = 'list', length = n_predictors)
    )
 
    # if the forest was not trained prior to variable selection
@@ -3045,9 +3079,21 @@ ObliqueForest <- R6::R6Class(
     cpp_args$mtry <- mtry_safe
     cpp_output <- do.call(orsf_cpp, args = cpp_args)
 
-    worst_index <- which.min(cpp_output$importance)
-    worst_predictor <- colnames(cpp_args$x)[worst_index]
+    n_drop <- min(n_predictor_drop,
+                  n_predictors - n_predictor_min)
 
+    if(n_drop > 0){
+
+     worst_index <- order(cpp_output$importance)[seq(n_drop)]
+
+     worst_predictor <- colnames(cpp_args$x)[worst_index]
+
+    } else {
+
+     worst_predictor <- NA_character_
+     n_drop <- 1
+
+    }
 
     .variables_included <- with(
      variable_key,
@@ -3062,8 +3108,8 @@ ObliqueForest <- R6::R6Class(
                   predictor_dropped = worst_predictor)]
 
     cpp_args$x <- cpp_args$x[, -worst_index, drop = FALSE]
-    n_predictors <- n_predictors - 1
-    current_progress <- current_progress + 1
+    n_predictors <- n_predictors - n_drop
+    current_progress <- current_progress + n_drop
 
    }
 
@@ -3270,7 +3316,9 @@ ObliqueForest <- R6::R6Class(
 
   # cleaners
 
-  clean_importance = function(importance = NULL, group_factors = NULL){
+  clean_importance = function(importance = NULL,
+                              group_factors = NULL,
+                              overwrite = TRUE){
 
    out <- importance %||% self$importance
    group_factors <- group_factors %||% self$importance_group_factors
@@ -3316,6 +3364,10 @@ ObliqueForest <- R6::R6Class(
 
     }
 
+   }
+
+   if(!overwrite){
+    return(rev(out[order(out), , drop=TRUE]))
    }
 
    self$importance <- rev(out[order(out), , drop=TRUE])
@@ -3517,12 +3569,29 @@ ObliqueForestSurvival <- R6::R6Class(
                     arg_name = 'leaf_min_events',
                     expected_length = 1)
 
-   check_arg_lteq(
+   .check <- check_arg_lteq(
     arg_value = self$leaf_min_events,
     arg_name = 'leaf_min_events',
-    bound = round(private$n_events / 2),
-    append_to_msg = "(number of events divided by 2)"
+    bound = floor(private$n_events / 2),
+    append_to_msg = "(number of events divided by 2)",
+    error = FALSE
    )
+
+   if(.check != "okay"){
+
+    warning_msg <-
+     paste0(.check, ". The highest admissible value will be used")
+
+    self$leaf_min_events <- floor(private$n_events / 2)
+
+    warning(warning_msg, call. = FALSE)
+
+   }
+
+
+
+
+
 
   },
   check_split_min_events = function(){

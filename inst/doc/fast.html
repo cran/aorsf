@@ -48,6 +48,7 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
@@ -371,7 +372,7 @@ compared to other approaches can be striking. For example:</p>
 <span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co"># unspecified control is much faster</span></span>
 <span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>time_net[<span class="st">&#39;elapsed&#39;</span>] <span class="sc">/</span> time_fast[<span class="st">&#39;elapsed&#39;</span>]</span>
 <span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; elapsed </span></span>
-<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt;    46.5</span></span></code></pre></div>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt;    90.5</span></span></code></pre></div>
 </div>
 <div id="use-n_thread" class="section level2">
 <h2>Use <code>n_thread</code></h2>
@@ -433,7 +434,9 @@ running less slow.</p>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>verbose_fit <span class="ot">&lt;-</span> <span class="fu">orsf</span>(pbc_orsf, </span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                    <span class="at">formula =</span> time<span class="sc">+</span>status<span class="sc">~</span>. <span class="sc">-</span>id, </span>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>                    <span class="at">n_tree =</span> <span class="dv">5</span>, </span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                    <span class="at">verbose_progress =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                    <span class="at">verbose_progress =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Growing trees: 100%. </span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; Computing predictions: 100%.</span></span></code></pre></div>
 </div>
 <div id="dont-wait.-estimate" class="section level2">
 <h2>Don’t wait. Estimate!</h2>
@@ -452,11 +455,11 @@ estimate how long a specification of that model will take by using
 <span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a> time_est <span class="ot">&lt;-</span> <span class="fu">orsf_time_to_train</span>(fit_spec, <span class="at">n_tree_subset =</span> <span class="dv">5</span>)</span>
 <span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>)</span>
 <span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;    user  system elapsed </span></span>
-<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;     0.3     0.0     0.3</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;    0.39    0.00    0.42</span></span>
 <span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a></span>
 <span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co"># the estimated training time:</span></span>
 <span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>time_est</span>
-<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; Time difference of 115.5604 secs</span></span></code></pre></div>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; Time difference of 171.0136 secs</span></span></code></pre></div>
 </div>
 
 

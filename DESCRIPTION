@@ -1,8 +1,8 @@
 Package: aorsf
 Title: Accelerated Oblique Random Forests
-Version: 0.1.5
+Version: 0.1.6
 Authors@R: c(
-    person("Byron", "Jaeger", , "bjaeger@wakehealth.edu", role = c("aut", "cre"),
+    person("Byron", "Jaeger", , "byron.jaeger@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-7399-2299")),
     person("Nicholas", "Pajewski", role = "ctb"),
     person("Sawyer", "Welden", , "swelden@wakehealth.edu", role = "ctb"),
@@ -29,15 +29,16 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.3
 NeedsCompilation: yes
-Packaged: 2024-05-29 21:11:33 UTC; bjaeger
-Author: Byron Jaeger [aut, cre] (<https://orcid.org/0000-0001-7399-2299>),
+Packaged: 2025-12-08 15:35:45 UTC; byron
+Author: Byron Jaeger [aut, cre] (ORCID:
+    <https://orcid.org/0000-0001-7399-2299>),
   Nicholas Pajewski [ctb],
   Sawyer Welden [ctb],
   Christopher Jackson [rev],
   Marvin Wright [rev],
   Lukas Burk [rev]
-Maintainer: Byron Jaeger <bjaeger@wakehealth.edu>
+Maintainer: Byron Jaeger <byron.jaeger@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-05-30 03:40:02 UTC
+Date/Publication: 2025-12-11 15:50:08 UTC

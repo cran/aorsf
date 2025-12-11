@@ -33,14 +33,14 @@ pbc_fit
 
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  
-#  library(dplyr)
-#  
-#  pbc_fit <- pbc_orsf |>
-#   select(-id) |>
-#   orsf(formula = Surv(time, status) ~ .,
-#        n_tree = 5)
-#  
+# 
+# library(dplyr)
+# 
+# pbc_fit <- pbc_orsf |>
+#  select(-id) |>
+#  orsf(formula = Surv(time, status) ~ .,
+#       n_tree = 5)
+# 
 
 ## -----------------------------------------------------------------------------
 
@@ -58,9 +58,9 @@ orsf_vi_anova(bill_fit)
 
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  
-#  orsf_net <- orsf(data = pbc_orsf,
-#                   formula = Surv(time, status) ~ . - id,
-#                   control = orsf_control_survival(method = 'net'))
-#  
+# 
+# orsf_net <- orsf(data = pbc_orsf,
+#                  formula = Surv(time, status) ~ . - id,
+#                  control = orsf_control_survival(method = 'net'))
+# 
 
